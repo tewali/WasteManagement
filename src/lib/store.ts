@@ -71,6 +71,9 @@ export const store = {
   analysisForDocument(documentId: string) {
     return load().analyses.find((a) => a.document_id === documentId) ?? null;
   },
+  conversation(id: string) {
+    return load().conversations.find((c) => c.id === id) ?? null;
+  },
   document(id: string) {
     return load().documents.find((x) => x.id === id) ?? null;
   },

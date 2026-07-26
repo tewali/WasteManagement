@@ -9,6 +9,7 @@ import type {
   VerificationResult,
 } from "@/lib/types";
 import AppHeader from "../AppHeader";
+import { useImageAvailable } from "../Sidebar";
 import DocPanel from "../panel/DocPanel";
 import MessageBlocks from "./EsitoCard";
 import {
@@ -69,14 +70,63 @@ export default function ChatApp({
   const [dragOver, setDragOver] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const dragDepth = useRef(0);
+  const persistState = useRef({ conversationId, doc, tableId, lineId });
+  persistState.current = { conversationId, doc, tableId, lineId };
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
+
+  // Persist the conversation (and its auto-title) after every exchange.
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const s = persistState.current;
+    void fetch("/api/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: s.conversationId,
+        messages,
+        active_document_id: s.doc?.id ?? null,
+        active_table_id: s.tableId,
+        active_line_id: s.lineId,
+      }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.conversation?.id) setConversationId(d.conversation.id);
+      })
+      .catch(() => {});
+  }, [messages]);
+
+  async function openConversation(id: string) {
+    const res = await fetch(`/api/conversations/${id}`);
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      conversation: {
+        id: string;
+        messages: ChatMessage[];
+        active_table_id: string | null;
+        active_line_id: string | null;
+      };
+      document: DocumentRecord | null;
+      analysis: AnalysisRecord | null;
+    };
+    setConversationId(data.conversation.id);
+    setMessages(data.conversation.messages);
+    setDoc(data.document);
+    setAnalysis(data.analysis);
+    setAttachments(data.document ? [data.document] : []);
+    setVerification(null);
+    if (data.conversation.active_table_id) setTableId(data.conversation.active_table_id);
+    if (data.conversation.active_line_id) setLineId(data.conversation.active_line_id);
+    setPanelOpen(Boolean(data.document));
+  }
 
   const filteredSuggestions = input.trim()
     ? SUGGESTIONS.filter((s) => s.toLowerCase().includes(input.trim().toLowerCase()))
@@ -178,6 +228,7 @@ export default function ChatApp({
   }
 
   function newChat() {
+    setConversationId(null);
     setMessages([]);
     setDoc(null);
     setAnalysis(null);
@@ -240,7 +291,13 @@ export default function ChatApp({
 
   return (
     <>
-      <AppHeader title="Chat con Anna" badge="AI Assistant" onNewChat={newChat} />
+      <AppHeader
+        title="Chat con Anna"
+        badge="AI Assistant"
+        onNewChat={newChat}
+        onOpenConversation={openConversation}
+        activeConversationId={conversationId}
+      />
       <div className="flex min-h-0 flex-1">
         {/* Chat column */}
         <div className="relative flex min-w-0 flex-1 flex-col bg-[#f2f5f2]" {...dragProps}>
@@ -453,17 +510,12 @@ function TypingBubble() {
 }
 
 function AnnaAvatar() {
-  const [hasImage, setHasImage] = useState(true);
+  const hasImage = useImageAvailable("/anna.jpg");
   if (hasImage) {
     return (
       <span className="mt-1 block h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-brand/40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/anna.jpg"
-          alt="Anna"
-          className="h-full w-full object-cover object-top"
-          onError={() => setHasImage(false)}
-        />
+        <img src="/anna.jpg" alt="Anna" className="h-full w-full object-cover object-top" />
       </span>
     );
   }

@@ -56,7 +56,8 @@ export default function DocPanel({
   onSaveAnalysis: (patch: Record<string, string>) => Promise<void>;
 }) {
   const [page, setPage] = useState(1);
-  const [zoom, setZoom] = useState(110);
+  // "fit" = fit page width to the panel (default); a number = manual zoom %.
+  const [zoom, setZoom] = useState<number | "fit">("fit");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [changingTable, setChangingTable] = useState(false);
@@ -65,10 +66,11 @@ export default function DocPanel({
   const table = tables.find((t) => t.id === tableId);
   const line = lines.find((l) => l.id === lineId);
 
-  const pdfSrc = useMemo(
-    () => (doc.pdf_url ? `${doc.pdf_url}#toolbar=0&navpanes=0&page=${page}&zoom=${zoom}` : null),
-    [doc.pdf_url, page, zoom],
-  );
+  const pdfSrc = useMemo(() => {
+    if (!doc.pdf_url) return null;
+    const zoomParam = zoom === "fit" ? "view=FitH" : `zoom=${zoom}`;
+    return `${doc.pdf_url}#toolbar=0&navpanes=0&page=${page}&${zoomParam}`;
+  }, [doc.pdf_url, page, zoom]);
 
   const fields: { key: string; label: string; value: string }[] = [
     { key: "eer_declared", label: "CER rilevato", value: analysis.header.eer_declared },
@@ -141,11 +143,25 @@ export default function DocPanel({
             </button>
           </div>
           <div className="flex items-center gap-1">
-            <button className="rounded p-1 hover:bg-slate-100" onClick={() => setZoom((z) => Math.max(50, z - 10))} title="Riduci zoom">
+            <button
+              className="rounded p-1 hover:bg-slate-100"
+              onClick={() => setZoom((z) => Math.max(50, (z === "fit" ? 100 : z) - 10))}
+              title="Riduci zoom"
+            >
               <IconMinus size={14} />
             </button>
-            <span className="w-11 text-center text-[12px] tabular-nums">{zoom}%</span>
-            <button className="rounded p-1 hover:bg-slate-100" onClick={() => setZoom((z) => Math.min(300, z + 10))} title="Aumenta zoom">
+            <button
+              className="w-14 rounded text-center text-[12px] tabular-nums hover:bg-slate-100"
+              onClick={() => setZoom("fit")}
+              title="Adatta alla larghezza del pannello"
+            >
+              {zoom === "fit" ? "Adatta" : `${zoom}%`}
+            </button>
+            <button
+              className="rounded p-1 hover:bg-slate-100"
+              onClick={() => setZoom((z) => Math.min(300, (z === "fit" ? 100 : z) + 10))}
+              title="Aumenta zoom"
+            >
               <IconPlus size={14} />
             </button>
           </div>
@@ -163,11 +179,11 @@ export default function DocPanel({
             </button>
           </div>
         </div>
-        <div className="h-[330px] bg-slate-100 p-2">
+        <div className="h-[360px] overflow-hidden rounded-b-xl bg-slate-100">
           {pdfSrc ? (
-            <iframe key={pdfSrc} src={pdfSrc} className="h-full w-full rounded border border-slate-200 bg-white" title={doc.filename} />
+            <iframe key={pdfSrc} src={pdfSrc} className="h-full w-full border-0 bg-white" title={doc.filename} />
           ) : (
-            <div className="flex h-full items-center justify-center rounded border border-dashed border-slate-300 text-[12.5px] text-slate-400">
+            <div className="m-2 flex h-[calc(100%-16px)] items-center justify-center rounded border border-dashed border-slate-300 text-[12.5px] text-slate-400">
               Anteprima non disponibile per questo file
             </div>
           )}

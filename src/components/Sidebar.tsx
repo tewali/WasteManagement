@@ -2,7 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+/** True once the image at `src` has actually loaded (avoids broken-image flashes pre-hydration). */
+export function useImageAvailable(src: string): boolean {
+  const [ok, setOk] = useState(false);
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setOk(true);
+    img.src = src;
+  }, [src]);
+  return ok;
+}
 import {
   IconBook,
   IconChart,
@@ -85,19 +96,14 @@ export default function Sidebar() {
 
 /** Company logo: uses public/valli-logo.png when present, falls back to the SVG wordmark. */
 function BrandLogo() {
-  const [hasImage, setHasImage] = useState(true);
+  const hasImage = useImageAvailable("/valli-logo.png");
   return (
     <div className="px-6 pb-4 pt-5">
       {hasImage ? (
         <div className="flex items-end gap-2">
           <span className="rounded-md bg-white/95 px-2 py-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/valli-logo.png"
-              alt="Valli S.p.A."
-              className="h-7 w-auto"
-              onError={() => setHasImage(false)}
-            />
+            <img src="/valli-logo.png" alt="Valli S.p.A." className="h-7 w-auto" />
           </span>
           <span className="pb-0.5 text-[19px] font-extrabold leading-none text-brand-bright">AI</span>
         </div>
@@ -118,16 +124,11 @@ function BrandLogo() {
 
 /** Anna hero: uses public/anna.jpg when present, falls back to the stylized SVG. */
 function AnnaHero() {
-  const [hasImage, setHasImage] = useState(true);
+  const hasImage = useImageAvailable("/anna.jpg");
   if (hasImage) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src="/anna.jpg"
-        alt="Anna — AI Assistant"
-        className="h-full w-full object-cover object-top"
-        onError={() => setHasImage(false)}
-      />
+      <img src="/anna.jpg" alt="Anna — AI Assistant" className="h-full w-full object-cover object-top" />
     );
   }
   return <AnnaPortrait />;
