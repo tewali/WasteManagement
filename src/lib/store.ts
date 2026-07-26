@@ -1,5 +1,9 @@
-// Minimal JSON-file persistence for the MVP demo (swapped for Postgres in
-// production per docs/PROPOSAL.md). Single-process only.
+// Minimal JSON-file persistence for the MVP demo (records move to Postgres in
+// Phase 2 per docs/PROPOSAL.md). Single-process only.
+//
+// DATA_DIR is where both the JSON store and uploaded documents live. Locally
+// it defaults to .data/ in the project; on Render it points at the persistent
+// disk mount (see render.yaml), which is the app's document storage.
 import fs from "fs";
 import path from "path";
 import type { AnalysisRecord, Conversation, DocumentRecord, VerificationRecord } from "./types";
@@ -11,7 +15,7 @@ interface Db {
   conversations: Conversation[];
 }
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), ".data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
 export const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 

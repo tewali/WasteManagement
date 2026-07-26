@@ -30,7 +30,9 @@ based on the analytical results compared against the applicable regulatory limit
 
 Extraction is **simulated** in this build (uploads map to seed fixtures by filename;
 unknown files fall back to R1) — the Claude API extraction call lands in Phase 1.1.
-Persistence is a JSON file store in `.data/` (Postgres on Render per the proposal).
+Persistence and file storage live in `DATA_DIR` (default `.data/`; on Render, the
+persistent disk mounted at `/var/data` — see `render.yaml`). Database records move
+to Render Postgres in Phase 2; uploaded documents stay on the disk.
 
 ### Run
 

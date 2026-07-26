@@ -77,18 +77,18 @@ flowchart LR
     WORKER[Node worker - ingestion pipeline]
     REDIS[(Render Key Value - BullMQ queue)]
     PG[(Render Postgres + pgvector)]
+    DISK[(Render persistent disk - documents)]
   end
-  R2[(S3-compatible object storage - documents)]
   subgraph AI["Claude API"]
     EXT[Extraction: PDF/image -> structured JSON]
     CHAT[Chat with tool use]
   end
   RULES[Rules engine - deterministic TS lib]
 
-  WEB --> R2
+  WEB --> DISK
   WEB --> REDIS
   WORKER --> REDIS
-  WORKER --> R2
+  WORKER --> DISK
   WORKER --> EXT
   EXT --> PG
   WEB --> RULES
@@ -101,7 +101,7 @@ flowchart LR
 - **Web service:** Next.js (App Router) + TypeScript + Tailwind as a Render web service. Server components for lists/config, client components for chat and the PDF viewer (`pdf.js` with bbox highlights of non-conform rows). API routes serve the app; no separate API service until scale demands it (one repo, one deploy).
 - **Worker + queue:** a Node background worker consumes a **BullMQ** queue (Redis via Render Key Value) for the ingestion pipeline: fetch document → Claude extraction → persist → notify. No timeout pressure on large scanned PDFs; retries and dead-lettering come free with the queue.
 - **Database:** **Render Postgres** with the **pgvector** extension (normativa RAG). Multi-tenant isolation enforced in the application layer (every query scoped by `organization_id` through the ORM), plus append-only audit tables.
-- **Documents:** Render has no object storage, so uploaded reports go to an S3-compatible bucket (Cloudflare R2 or AWS S3) via pre-signed URLs; only references live in Postgres.
+- **Documents:** uploaded reports live on a **Render persistent disk** attached to the web service (mounted at the app's data directory, `DATA_DIR`), served through authenticated app routes; only references live in Postgres. At this product's volume (lab-report PDFs, ~1 MB each, hundreds per year) a disk is simpler and cheaper than object storage: no bucket credentials, no pre-signed-URL plumbing, snapshots come from Render's disk backups. Known trade-offs, accepted for now: a disk pins the service to a single instance (no horizontal scaling) and files are reachable only through the app. The storage layer stays behind a small interface so an S3-compatible bucket can be swapped in later if multi-instance scaling or direct/CDN delivery becomes necessary.
 - **Auth & SSO:** in-app via **Auth.js** — email/password + OIDC from day one; SAML later by adding a self-hosted **SAML Jackson** service on Render when the first enterprise customer needs it. No per-tier gating; sessions and roles (operator, admin, future customer-portal user) are our own tables.
 - **AI layer:** Claude API.
   - *Extraction:* the PDF is sent to Claude with a strict JSON schema (structured output) for the report fields and parameter rows — including the lab's own claimed limits/conclusions, which are stored but never trusted (see §2); per-field confidence + source-page reference; low-confidence fields are flagged in the *Dati estratti* panel for human confirmation.

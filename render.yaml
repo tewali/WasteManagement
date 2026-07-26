@@ -1,13 +1,16 @@
 # Render Blueprint — Phase 1 MVP deployment
 # https://render.com/docs/blueprint-spec
 #
-# Deploys the Next.js app as a single Node web service. The MVP's JSON file
-# store (.data/) lives on a persistent disk so documents and verifications
-# survive deploys; it is replaced by Render Postgres in Phase 2 (see
-# docs/PROPOSAL.md §4).
+# Deploys the Next.js app as a single Node web service. File storage is the
+# Render persistent disk mounted at /var/data (DATA_DIR): it holds the
+# uploaded lab-report PDFs and the MVP's JSON store, so both survive deploys
+# and restarts. Database records move to Render Postgres in Phase 2; documents
+# stay on the disk (see docs/PROPOSAL.md §4 for the trade-offs and the S3
+# escape hatch if multi-instance scaling is ever needed).
 #
 # Note: persistent disks require a paid instance type. To trial on the free
-# tier, remove the `disk` block (data then resets on each deploy).
+# tier, remove the `disk` block and the DATA_DIR env var (data then resets on
+# each deploy).
 
 services:
   - type: web
@@ -21,9 +24,11 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
+      - key: DATA_DIR
+        value: /var/data
       # - key: ANTHROPIC_API_KEY   # Phase 1.1: real Claude extraction
       #   sync: false
     disk:
       name: valli-data
-      mountPath: /opt/render/project/src/.data
-      sizeGB: 1
+      mountPath: /var/data
+      sizeGB: 5
