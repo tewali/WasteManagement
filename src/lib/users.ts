@@ -101,7 +101,9 @@ export const users = {
     company?: string;
   }): UserAccount {
     const list = load();
-    const role = input.role === "producer" ? "producer" : "operator";
+    // Callers gate which roles are allowed: the public register API only ever
+    // passes "producer" or nothing; the admin API may pass any role.
+    const role = input.role ?? "operator";
     const user: UserAccount = {
       id: `usr_${Date.now().toString(36)}${randomBytes(3).toString("hex")}`,
       name: input.name.trim(),
@@ -118,5 +120,116 @@ export const users = {
   },
   list(): Omit<UserAccount, "password_hash">[] {
     return load().map(({ password_hash: _ph, ...u }) => u);
+  },
+  remove(id: string): boolean {
+    const list = load();
+    const i = list.findIndex((u) => u.id === id);
+    if (i < 0) return false;
+    list.splice(i, 1);
+    save();
+    return true;
+  },
+  updateRole(id: string, role: UserAccount["role"]): boolean {
+    const u = load().find((x) => x.id === id);
+    if (!u) return false;
+    u.role = role;
+    save();
+    return true;
+  },
+};
+
+// ---- invites (Phase 3: admin-managed onboarding) --------------------------
+//
+// An invite is a one-time registration link. No email is sent from the app:
+// the admin copies the link and shares it; registering through it consumes
+// the token and assigns the role (and company, for producers) fixed by the
+// admin — the public form can never self-assign elevated roles.
+
+export interface InviteRecord {
+  token: string;
+  /** If set, registration through this invite must use this email. */
+  email: string | null;
+  role: UserAccount["role"];
+  company: string | null;
+  created_by: string;
+  created_at: string;
+  expires_at: string;
+  used_at: string | null;
+  used_by_email: string | null;
+}
+
+export const INVITE_VALIDITY_DAYS = 14;
+
+const INVITES_FILE = path.join(DATA_DIR, "invites.json");
+
+let invitesCache: InviteRecord[] | null = null;
+
+function loadInvites(): InviteRecord[] {
+  if (invitesCache) return invitesCache;
+  try {
+    invitesCache = JSON.parse(fs.readFileSync(INVITES_FILE, "utf-8")) as InviteRecord[];
+  } catch {
+    invitesCache = [];
+  }
+  return invitesCache;
+}
+
+function saveInvites() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(INVITES_FILE, JSON.stringify(invitesCache, null, 2));
+}
+
+export type InviteState = "valid" | "used" | "expired" | "not_found";
+
+export function inviteState(invite: InviteRecord | null | undefined, now = new Date()): InviteState {
+  if (!invite) return "not_found";
+  if (invite.used_at) return "used";
+  if (now.toISOString() > invite.expires_at) return "expired";
+  return "valid";
+}
+
+export const invites = {
+  list(): InviteRecord[] {
+    return loadInvites();
+  },
+  byToken(token: string): InviteRecord | null {
+    return loadInvites().find((i) => i.token === token) ?? null;
+  },
+  create(input: {
+    email?: string | null;
+    role: UserAccount["role"];
+    company?: string | null;
+    created_by: string;
+  }): InviteRecord {
+    const now = new Date();
+    const invite: InviteRecord = {
+      token: randomBytes(16).toString("hex"),
+      email: input.email?.trim().toLowerCase() || null,
+      role: input.role,
+      company: input.company?.trim() || null,
+      created_by: input.created_by,
+      created_at: now.toISOString(),
+      expires_at: new Date(now.getTime() + INVITE_VALIDITY_DAYS * 86400_000).toISOString(),
+      used_at: null,
+      used_by_email: null,
+    };
+    loadInvites().unshift(invite);
+    saveInvites();
+    return invite;
+  },
+  markUsed(token: string, email: string) {
+    const invite = loadInvites().find((i) => i.token === token);
+    if (!invite) return;
+    invite.used_at = new Date().toISOString();
+    invite.used_by_email = email.toLowerCase();
+    saveInvites();
+  },
+  revoke(token: string): boolean {
+    const list = loadInvites();
+    const i = list.findIndex((x) => x.token === token);
+    if (i < 0) return false;
+    list.splice(i, 1);
+    saveInvites();
+    return true;
   },
 };

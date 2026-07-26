@@ -199,6 +199,14 @@ export const IconGauge = (p: P) =>
       <path d="M3.34 17a10 10 0 1 1 17.32 0" />
     </>,
   );
+export const IconShield = (p: P) =>
+  base(
+    p,
+    <>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+      <path d="m9 12 2 2 4-4" />
+    </>,
+  );
 export const IconPdf = ({ size = 22, ...props }: P) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
     <path
