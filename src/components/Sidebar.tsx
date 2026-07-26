@@ -45,8 +45,8 @@ export default function Sidebar() {
       <BrandLogo />
 
       {/* Anna hero: real photo if public/anna.png exists, SVG placeholder otherwise.
-          Height scales with the viewport; on desktop (lg+) it stays at least 400px. */}
-      <div className="relative mx-0 h-[22vh] max-h-[300px] min-h-[130px] shrink-0 overflow-hidden lg:h-[36vh] lg:max-h-[560px] lg:min-h-[400px]">
+          Height scales with the viewport; on desktop (lg+) it stays at least 300px. */}
+      <div className="relative mx-0 h-[22vh] max-h-[300px] min-h-[130px] shrink-0 overflow-hidden lg:h-[36vh] lg:max-h-[560px] lg:min-h-[300px]">
         <AnnaHero />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-forest-900 to-transparent" />
       </div>
