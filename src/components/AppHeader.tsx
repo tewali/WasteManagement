@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { IconBell, IconChat, IconHistory, IconNewChat } from "./icons";
 
@@ -16,6 +17,7 @@ interface NotificationItem {
   tone: "ok" | "ko" | "info";
   title: string;
   detail: string;
+  href: string | null;
 }
 
 const SEEN_KEY = "valli-notifications-seen";
@@ -191,27 +193,45 @@ export default function AppHeader({
                 </div>
               ) : (
                 <ul className="max-h-[320px] overflow-y-auto py-1">
-                  {notifications.map((n) => (
-                    <li key={n.id} className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-slate-50">
-                      <span
-                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                          n.tone === "ok" ? "bg-brand" : n.tone === "ko" ? "bg-red-500" : "bg-sky-400"
-                        }`}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[12.5px] font-semibold text-slate-800">
-                          {n.title}
+                  {notifications.map((n) => {
+                    const body = (
+                      <>
+                        <span
+                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                            n.tone === "ok" ? "bg-brand" : n.tone === "ko" ? "bg-red-500" : "bg-sky-400"
+                          }`}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[12.5px] font-semibold text-slate-800">
+                            {n.title}
+                          </span>
+                          <span className="block truncate text-[11.5px] text-slate-500">{n.detail}</span>
+                          <span className="block text-[10.5px] text-slate-400">
+                            {new Date(n.time).toLocaleString("it-IT", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </span>
                         </span>
-                        <span className="block truncate text-[11.5px] text-slate-500">{n.detail}</span>
-                        <span className="block text-[10.5px] text-slate-400">
-                          {new Date(n.time).toLocaleString("it-IT", {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </span>
-                      </span>
-                    </li>
-                  ))}
+                      </>
+                    );
+                    return (
+                      <li key={n.id}>
+                        {n.href ? (
+                          <Link
+                            href={n.href}
+                            onClick={() => setNotifOpen(false)}
+                            className="flex items-start gap-2.5 px-4 py-2.5 hover:bg-brand-mist"
+                            title="Apri la chat collegata"
+                          >
+                            {body}
+                          </Link>
+                        ) : (
+                          <span className="flex items-start gap-2.5 px-4 py-2.5">{body}</span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

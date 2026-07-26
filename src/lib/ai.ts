@@ -39,6 +39,29 @@ function client(): Anthropic {
   return _client;
 }
 
+// Create with server-side refusal fallbacks; if the org doesn't have the
+// beta (400), retry the identical request without it rather than failing.
+async function createMessage(
+  params: Omit<Anthropic.Beta.Messages.MessageCreateParamsNonStreaming, "model" | "betas" | "fallbacks">,
+) {
+  try {
+    return await client().beta.messages.create({
+      model: MODEL,
+      betas: [FALLBACK_BETA],
+      fallbacks: "default",
+      ...params,
+    } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming);
+  } catch (e) {
+    if (e instanceof Anthropic.BadRequestError) {
+      return await client().beta.messages.create({
+        model: MODEL,
+        ...params,
+      } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming);
+    }
+    throw e;
+  }
+}
+
 const nullable = (t: "string" | "number") => ({ anyOf: [{ type: t }, { type: "null" }] });
 
 function extractionSchema() {
@@ -101,11 +124,8 @@ export async function extractFromPdf(
   pdf: Buffer,
   filename: string,
 ): Promise<{ header: ReportHeader; parameters: ReportParameter[] }> {
-  const response = await client().beta.messages.create({
-    model: MODEL,
+  const response = await createMessage({
     max_tokens: 32000,
-    betas: [FALLBACK_BETA],
-    fallbacks: "default",
     output_config: { format: { type: "json_schema", schema: extractionSchema() } },
     messages: [
       {
@@ -243,11 +263,8 @@ export async function annaChat(opts: {
   let lineId: string | null = null;
 
   for (let i = 0; i < 4; i++) {
-    const response = await client().beta.messages.create({
-      model: MODEL,
+    const response = await createMessage({
       max_tokens: 16000,
-      betas: [FALLBACK_BETA],
-      fallbacks: "default",
       system: systemPrompt(opts.analysis, opts.document),
       tools,
       messages,

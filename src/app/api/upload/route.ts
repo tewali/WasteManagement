@@ -77,5 +77,11 @@ export async function POST(req: NextRequest) {
     extraction_source: source,
   };
   store.addDocument(doc, analysis);
-  return NextResponse.json({ document: doc, analysis, extraction_source: source, ai_error: aiError });
+  return NextResponse.json({
+    document: doc,
+    analysis,
+    extraction_source: source,
+    ai_enabled: aiEnabled(),
+    ai_error: aiError,
+  });
 }

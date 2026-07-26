@@ -19,7 +19,6 @@ import {
   IconPdf,
   IconRefresh,
   IconSend,
-  IconUploadFlask,
 } from "../icons";
 
 interface TableOpt {
@@ -31,17 +30,6 @@ interface LineOpt {
   id: string;
   name: string;
 }
-
-const SUGGESTIONS = [
-  "Verifica la conformità con la Tabella 5 colonna A",
-  "Verifica contro Tabella 5 colonna B (uso commerciale/industriale)",
-  "Il rifiuto è ammissibile in discarica per inerti?",
-  "Verifica i limiti per discarica non pericolosi",
-  "Verifica il vincolo POP / PFAS (Reg. 2019/1021)",
-  "Può essere accettato sulla linea Soil Washing?",
-  "Quali parametri sono non determinati e perché?",
-  "Quali codici EER sono ammessi sulla linea di inertizzazione?",
-];
 
 const DEMO_PROMPT =
   "Buongiorno Anna, puoi analizzare questa analisi (allegato) e verificare se il rifiuto 170903* può essere accettato sulla linea Soil Washing secondo i limiti Tabella 5 del D.Lgs. 121/2020?";
@@ -71,8 +59,6 @@ export default function ChatApp({
   const [lineId, setLineId] = useState("L1-soil-washing");
   const [panelOpen, setPanelOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const [suggestIndex, setSuggestIndex] = useState(0);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   const fileInput = useRef<HTMLInputElement>(null);
@@ -138,10 +124,6 @@ export default function ChatApp({
     if (data.conversation.active_line_id) setLineId(data.conversation.active_line_id);
     setPanelOpen(Boolean(data.document));
   }
-
-  const filteredSuggestions = input.trim()
-    ? SUGGESTIONS.filter((s) => s.toLowerCase().includes(input.trim().toLowerCase()))
-    : SUGGESTIONS.slice(0, 5);
 
   const pushMessage = (m: ChatMessage) => setMessages((prev) => [...prev, m]);
 
@@ -211,7 +193,13 @@ export default function ChatApp({
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = (await res.json()) as { document: DocumentRecord; analysis: AnalysisRecord };
+      const data = (await res.json()) as {
+        document: DocumentRecord;
+        analysis: AnalysisRecord;
+        extraction_source: "claude" | "fixture";
+        ai_enabled: boolean;
+        ai_error: string | null;
+      };
       setDoc(data.document);
       setAnalysis(data.analysis);
       setAttachments((prev) => [data.document, ...prev]);
@@ -223,6 +211,24 @@ export default function ChatApp({
         text: `Ho caricato il rapporto di prova "${file.name}": puoi analizzarlo e verificarne la conformità?`,
         attachment: { document_id: data.document.id, filename: file.name },
       });
+      // Be explicit when the panel shows demo data instead of a real extraction.
+      if (data.extraction_source === "fixture") {
+        pushMessage({
+          id: mid(),
+          role: "assistant",
+          time: now(),
+          blocks: [
+            {
+              type: "text",
+              text: data.ai_error
+                ? `⚠️ **Estrazione AI non riuscita** (${data.ai_error}): nel pannello a destra sono mostrati **dati dimostrativi**, non il contenuto del PDF caricato. Riprovi o verifichi il documento.`
+                : data.ai_enabled
+                  ? `⚠️ Questo formato non è supportato dall'estrazione AI (solo PDF): nel pannello a destra sono mostrati **dati dimostrativi**.`
+                  : `⚠️ **Estrazione AI non attiva** (manca \`ANTHROPIC_API_KEY\`): nel pannello a destra sono mostrati **dati dimostrativi**, non il contenuto del PDF caricato.`,
+            },
+          ],
+        });
+      }
       await askAnna(
         `Analizza il rapporto e verifica la conformità per la linea selezionata`,
         data.document,
@@ -271,7 +277,6 @@ export default function ChatApp({
     const t = (text ?? input).trim();
     if (!t || busy) return;
     setInput("");
-    setSuggestOpen(false);
     void askAnna(t, doc);
   }
 
@@ -370,52 +375,12 @@ export default function ChatApp({
           <div className="shrink-0 px-8 pb-5 pt-2">
             <div className="mx-auto max-w-[760px]">
               <div className="relative">
-                {suggestOpen && filteredSuggestions.length > 0 && (
-                  <ul className="absolute bottom-full z-10 mb-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-panel">
-                    {filteredSuggestions.map((s, i) => (
-                      <li key={s}>
-                        <button
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            submit(s);
-                          }}
-                          onMouseEnter={() => setSuggestIndex(i)}
-                          className={`block w-full px-4 py-2 text-left text-[13px] ${
-                            i === suggestIndex ? "bg-brand-mist text-brand-dark" : "text-slate-600"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
                 <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-1.5 shadow-card focus-within:border-brand">
                   <input
                     value={input}
-                    onChange={(e) => {
-                      setInput(e.target.value);
-                      setSuggestOpen(true);
-                      setSuggestIndex(0);
-                    }}
-                    onFocus={() => setSuggestOpen(true)}
-                    onBlur={() => setTimeout(() => setSuggestOpen(false), 150)}
+                    onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        setSuggestIndex((i) => Math.min(i + 1, filteredSuggestions.length - 1));
-                      } else if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        setSuggestIndex((i) => Math.max(i - 1, 0));
-                      } else if (e.key === "Enter") {
-                        if (suggestOpen && filteredSuggestions[suggestIndex] && input.trim().length > 0 && filteredSuggestions.length < SUGGESTIONS.length) {
-                          submit(filteredSuggestions[suggestIndex]);
-                        } else {
-                          submit();
-                        }
-                      } else if (e.key === "Escape") {
-                        setSuggestOpen(false);
-                      }
+                      if (e.key === "Enter") submit();
                     }}
                     placeholder="Fai una domanda tecnica..."
                     className="h-10 flex-1 bg-transparent text-[13.5px] outline-none placeholder:text-slate-400"
@@ -431,17 +396,11 @@ export default function ChatApp({
                 </div>
               </div>
 
-              <div className="mt-3 grid grid-cols-4 gap-3">
-                <QuickAction
-                  icon={<IconUploadFlask size={17} className="text-brand-dark" />}
-                  title="Carica analisi"
-                  subtitle="(PDF, Excel, Immagine)"
-                  onClick={() => fileInput.current?.click()}
-                />
+              <div className="mt-3 grid grid-cols-3 gap-3">
                 <QuickAction
                   icon={<IconDoc size={17} className="text-brand-dark" />}
                   title="Carica documento"
-                  subtitle="(PDF, Word, Excel)"
+                  subtitle="(PDF, Excel, Immagine)"
                   onClick={() => fileInput.current?.click()}
                 />
                 <QuickAction

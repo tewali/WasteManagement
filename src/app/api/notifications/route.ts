@@ -9,7 +9,13 @@ export async function GET() {
     return NextResponse.json({ error: "non autenticato" }, { status: 401 });
   }
 
-  const { verifications, documents } = store.get();
+  const { verifications, documents, conversations } = store.get();
+  // Link each notification to the chat its document belongs to.
+  const chatFor = (documentId: string | null) => {
+    if (!documentId) return null;
+    const conv = conversations.find((c) => c.active_document_id === documentId);
+    return conv ? `/?c=${conv.id}` : null;
+  };
   const items = [
     ...verifications.map((v) => ({
       id: `ver_${v.id}`,
@@ -21,6 +27,7 @@ export async function GET() {
           ? "Verifica conforme"
           : "Verifica NON conforme",
       detail: `${documents.find((d) => d.id === v.document_id)?.filename ?? "—"} · ${v.limit_table_name.split("(")[0].trim()} (${v.counts.conforme}/${v.counts.non_conforme}/${v.counts.non_determinato})`,
+      href: chatFor(v.document_id),
     })),
     ...documents.map((d) => ({
       id: `doc_${d.id}`,
@@ -28,6 +35,7 @@ export async function GET() {
       tone: "info",
       title: "Documento acquisito",
       detail: d.filename,
+      href: chatFor(d.id),
     })),
   ]
     .sort((a, b) => b.time.localeCompare(a.time))
