@@ -1,0 +1,66 @@
+{
+  "id": "R4",
+  "scenario": "Sovvalli da trattamento meccanico (19 12 12): eluato NON conforme discarica inerti (DOC, solfati, nichel, zinco, fluoruri) ma conforme discarica non pericolosi. Testa il routing di destinazione: rifiuta la prima destinazione, suggerisce la successiva ammissibile.",
+  "pdf": null,
+  "producer_id": "prod-costruzioni-bianchi",
+  "extraction": {
+    "header": {
+      "report_number": "SOV/2026-058",
+      "laboratory": "ChemService Lombardia S.r.l. (simulato)",
+      "sampling_date": "2026-07-02",
+      "report_date": "2026-07-09",
+      "sampled_by": "Laboratorio",
+      "eer_declared": "19 12 12",
+      "waste_description": "Altri rifiuti (compresi materiali misti) prodotti dal trattamento meccanico dei rifiuti, diversi da quelli di cui alla voce 19 12 11",
+      "physical_state": "Solido eterogeneo",
+      "leaching_test": "UNI EN 12457-2, L/S = 10 l/kg"
+    },
+    "parameters": [
+      { "analyte_key": "ph_eluato", "result_raw": "8,9", "operator": null, "value": 8.9, "unit": "unità pH", "basis": "eluate", "method": "APAT CNR IRSA 2060" },
+      { "analyte_key": "arsenico_el", "result_raw": "0,01", "operator": null, "value": 0.01, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "cadmio_el", "result_raw": "0,002", "operator": null, "value": 0.002, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "cromo_totale_el", "result_raw": "0,03", "operator": null, "value": 0.03, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "mercurio_el", "result_raw": "< 0,0005", "operator": "<", "value": 0.0005, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "nichel_el", "result_raw": "0,06", "operator": null, "value": 0.06, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "piombo_el", "result_raw": "0,02", "operator": null, "value": 0.02, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "rame_el", "result_raw": "0,1", "operator": null, "value": 0.1, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "zinco_el", "result_raw": "0,9", "operator": null, "value": 0.9, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2" },
+      { "analyte_key": "fluoruri_el", "result_raw": "2,0", "operator": null, "value": 2.0, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 10304-1" },
+      { "analyte_key": "cloruri_el", "result_raw": "300", "operator": null, "value": 300, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 10304-1" },
+      { "analyte_key": "solfati_el", "result_raw": "1400", "operator": null, "value": 1400, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 10304-1" },
+      { "analyte_key": "doc_el", "result_raw": "65", "operator": null, "value": 65, "unit": "mg/l", "basis": "eluate", "method": "UNI EN 1484:1999" },
+      { "analyte_key": "tds_el", "result_raw": "900", "operator": null, "value": 900, "unit": "mg/l", "basis": "eluate", "method": "Calcolato" }
+    ]
+  },
+  "expected": {
+    "verifications": [
+      {
+        "limit_table_id": "eluato-discarica-inerti",
+        "line_id": "L2-inertizzazione",
+        "counts": { "conforme": 9, "non_conforme": 5, "non_determinato": 0, "non_applicabile": 0 },
+        "non_conformi": [
+          { "analyte_key": "nichel_el", "value": 0.06, "limit": 0.04 },
+          { "analyte_key": "zinco_el", "value": 0.9, "limit": 0.4 },
+          { "analyte_key": "fluoruri_el", "value": 2.0, "limit": 1.0 },
+          { "analyte_key": "solfati_el", "value": 1400, "limit": 1000 },
+          { "analyte_key": "doc_el", "value": 65, "limit": 50 }
+        ],
+        "overall": "non_conforme"
+      },
+      {
+        "limit_table_id": "eluato-discarica-non-pericolosi",
+        "line_id": "L2-inertizzazione",
+        "counts": { "conforme": 14, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 0 },
+        "overall": "conforme"
+      }
+    ],
+    "decision": {
+      "esito": "accettabile_con_destinazione_alternativa",
+      "motivazione": "Eluato non conforme ai criteri per discarica rifiuti inerti (Nichel, Zinco, Fluoruri, Solfati, DOC) ma conforme ai criteri per discarica rifiuti non pericolosi.",
+      "destinazione_suggerita": "Discarica per rifiuti non pericolosi; in alternativa trattamento su Linea 2 (inertizzazione) per tentare il declassamento a inerti",
+      "azioni_suggerite": [
+        "Verificare parametri gestionali aggiuntivi richiesti dalla discarica di destinazione (TOC, ammonio) non presenti nel rapporto"
+      ]
+    }
+  }
+}

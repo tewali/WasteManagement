@@ -1,0 +1,78 @@
+{
+  "id": "R2",
+  "scenario": "Il fac-simile di docs/context/gemini-2 (esteso con Ba/Mo/Sb/Se in eluato per copertura completa della tabella inerti). Passa integralmente: eluato conforme discarica inerti, POP conformi, limiti dichiarati dal laboratorio ignorati a favore delle tabelle interne.",
+  "pdf": "pdf/R2-2026_ANAL-0842_170504.pdf",
+  "producer_id": "prod-esempio",
+  "extraction": {
+    "header": {
+      "report_number": "2026/ANAL-0842",
+      "laboratory": "Laboratorio Chimico Ambientale S.r.l. (fac-simile)",
+      "sampling_date": "2026-07-18",
+      "report_date": "2026-07-26",
+      "received_date": "2026-07-20",
+      "sampled_by": "Cliente / Tecnico Abilitato",
+      "eer_declared": "17 05 04",
+      "waste_description": "Terre e rocce, diverse da quelle di cui alla voce 17 05 03 — terreno da scavo",
+      "physical_state": "Solido non polverulento",
+      "lab_claimed_conclusion": "Rifiuto NON PERICOLOSO EER 17 05 04; eluato entro i limiti D.M. 27/09/2010 per discarica rifiuti inerti (citazione normativa superata — mappata su D.Lgs. 121/2020)",
+      "leaching_test": "UNI EN 12457-2, L/S = 10 l/kg"
+    },
+    "parameters": [
+      { "analyte_key": "sostanza_secca", "result_raw": "88,5", "operator": null, "value": 88.5, "unit": "%", "basis": "total", "method": "UNI EN 14346:2007" },
+      { "analyte_key": "ph", "result_raw": "7,8", "operator": null, "value": 7.8, "unit": "unità pH", "basis": "total", "method": "EPA 9045D:2004" },
+      { "analyte_key": "idrocarburi_c12plus", "result_raw": "45", "operator": null, "value": 45, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 14039:2004" },
+      { "analyte_key": "idrocarburi_c12minus", "result_raw": "< 1,0", "operator": "<", "value": 1.0, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 5021A + EPA 8015D" },
+      { "analyte_key": "benzene", "result_raw": "< 0,1", "operator": "<", "value": 0.1, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 5021A + EPA 8260D" },
+      { "analyte_key": "pcb", "result_raw": "< 0,01", "operator": "<", "value": 0.01, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 15308:2008" },
+      { "analyte_key": "ipa_somma", "result_raw": "0,15", "operator": null, "value": 0.15, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 15527:2008" },
+      { "analyte_key": "pcdd_pcdf_teq", "result_raw": "< 0,0001", "operator": "<", "value": 0.0001, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 1613B:1994" },
+      { "analyte_key": "pfas_somma", "result_raw": "< 0,05", "operator": "<", "value": 0.05, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI CEN/TS 15968:2010" },
+      { "analyte_key": "pesticidi_organoclorurati_somma", "result_raw": "< 0,01", "operator": "<", "value": 0.01, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 8081B:2007" },
+      { "analyte_key": "ph_eluato", "result_raw": "7,6", "operator": null, "value": 7.6, "unit": "unità pH", "basis": "eluate", "method": "APAT CNR IRSA 2060" },
+      { "analyte_key": "conducibilita", "result_raw": "420", "operator": null, "value": 420, "unit": "µS/cm a 20°C", "basis": "eluate", "method": "APAT CNR IRSA 2030" },
+      { "analyte_key": "cianuri_totali_el", "result_raw": "< 0,01", "operator": "<", "value": 0.01, "unit": "mg/l", "basis": "eluate", "method": "APAT CNR IRSA 4070", "lab_claimed_limit": "0,01" },
+      { "analyte_key": "fluoruri_el", "result_raw": "0,4", "operator": null, "value": 0.4, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 10304-1", "lab_claimed_limit": "1,0" },
+      { "analyte_key": "cloruri_el", "result_raw": "25,0", "operator": null, "value": 25.0, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 10304-1", "lab_claimed_limit": "800" },
+      { "analyte_key": "solfati_el", "result_raw": "85,0", "operator": null, "value": 85.0, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 10304-1", "lab_claimed_limit": "1000" },
+      { "analyte_key": "arsenico_el", "result_raw": "< 0,005", "operator": "<", "value": 0.005, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,05" },
+      { "analyte_key": "cadmio_el", "result_raw": "< 0,001", "operator": "<", "value": 0.001, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,004" },
+      { "analyte_key": "cromo_totale_el", "result_raw": "0,012", "operator": null, "value": 0.012, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,05" },
+      { "analyte_key": "rame_el", "result_raw": "0,03", "operator": null, "value": 0.03, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,2" },
+      { "analyte_key": "nichel_el", "result_raw": "0,01", "operator": null, "value": 0.01, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,04" },
+      { "analyte_key": "piombo_el", "result_raw": "< 0,005", "operator": "<", "value": 0.005, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,05" },
+      { "analyte_key": "mercurio_el", "result_raw": "< 0,0005", "operator": "<", "value": 0.0005, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,002" },
+      { "analyte_key": "zinco_el", "result_raw": "0,15", "operator": null, "value": 0.15, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,4" },
+      { "analyte_key": "bario_el", "result_raw": "0,3", "operator": null, "value": 0.3, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "2" },
+      { "analyte_key": "molibdeno_el", "result_raw": "< 0,01", "operator": "<", "value": 0.01, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,05" },
+      { "analyte_key": "antimonio_el", "result_raw": "< 0,002", "operator": "<", "value": 0.002, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,006" },
+      { "analyte_key": "selenio_el", "result_raw": "< 0,005", "operator": "<", "value": 0.005, "unit": "mg/l", "basis": "eluate", "method": "UNI EN ISO 17294-2", "lab_claimed_limit": "0,01" },
+      { "analyte_key": "doc_el", "result_raw": "12,0", "operator": null, "value": 12.0, "unit": "mg/l", "basis": "eluate", "method": "UNI EN 1484:1999", "lab_claimed_limit": "50" },
+      { "analyte_key": "tds_el", "result_raw": "280", "operator": null, "value": 280, "unit": "mg/l", "basis": "eluate", "method": "Calcolato", "lab_claimed_limit": "4000" }
+    ]
+  },
+  "expected": {
+    "verifications": [
+      {
+        "limit_table_id": "eluato-discarica-inerti",
+        "line_id": "L2-inertizzazione",
+        "counts": { "conforme": 19, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 1 },
+        "non_applicabili": [
+          { "analyte_key": "conducibilita", "reason": "Nessun limite in tabella — valore informativo" }
+        ],
+        "note": "Cianuri totali: risultato < 0,01 con LOQ pari al limite (0,01) → conforme per semantica LOQ = limite.",
+        "overall": "conforme"
+      },
+      {
+        "limit_table_id": "pop-reg-2019-1021",
+        "line_id": "L2-inertizzazione",
+        "counts": { "conforme": 3, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 0 },
+        "overall": "conforme"
+      }
+    ],
+    "decision": {
+      "esito": "accettabile",
+      "motivazione": "Eluato conforme ai criteri di ammissibilità per discarica rifiuti inerti; vincolo POP rispettato. Rifiuto non pericoloso EER 17 05 04 ammissibile anche in ingresso alla Linea 1 Soil Washing.",
+      "destinazione_suggerita": "Conferimento diretto a discarica per rifiuti inerti, oppure recupero su Linea 1 (Soil Washing)"
+    }
+  }
+}

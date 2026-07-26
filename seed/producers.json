@@ -1,0 +1,28 @@
+{
+  "producers": [
+    {
+      "id": "prod-esempio",
+      "name": "Azienda Esempio S.r.l.",
+      "vat_number": "IT09876543210",
+      "address": "Via delle Industrie 10, 20100 Milano (MI)",
+      "contact": "amministrazione@esempio.example",
+      "notes": "Produttore del campione fac-simile 2026/ANAL-0842 (terre e rocce da scavo)."
+    },
+    {
+      "id": "prod-bonifiche-nord",
+      "name": "Bonifiche Ambientali Nord S.p.A.",
+      "vat_number": "IT05544332211",
+      "address": "Corso Regio Parco 88, 10100 Torino (TO)",
+      "contact": "cantieri@ban-spa.example",
+      "notes": "Cantieri di bonifica siti industriali — conferimenti di terreni contaminati (17 05 03*/17 05 04)."
+    },
+    {
+      "id": "prod-costruzioni-bianchi",
+      "name": "Costruzioni Bianchi S.r.l.",
+      "vat_number": "IT07711223344",
+      "address": "Via Cave 12, 25128 Brescia (BS)",
+      "contact": "tecnico@bianchicostruzioni.example",
+      "notes": "Demolizioni e scavi — conferimenti C&D (17 09 03*/17 09 04) e sovvalli (19 12 12)."
+    }
+  ]
+}

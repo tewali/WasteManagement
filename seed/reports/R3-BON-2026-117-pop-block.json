@@ -1,0 +1,68 @@
+{
+  "id": "R3",
+  "scenario": "Terreno da bonifica di sito industriale: conforme a Tabella 5 colonna B, ma PFOA 4,2 mg/kg > 1 mg/kg (All. IV Reg. POP). Il vincolo POP è bloccante: il rifiuto non è ammissibile a recupero né a discarica nonostante la conformità alla tabella di linea.",
+  "pdf": null,
+  "producer_id": "prod-bonifiche-nord",
+  "extraction": {
+    "header": {
+      "report_number": "BON/2026-117",
+      "laboratory": "EcoLab Piemonte S.r.l. (simulato)",
+      "sampling_date": "2026-06-30",
+      "report_date": "2026-07-10",
+      "sampled_by": "Tecnico Abilitato",
+      "eer_declared": "17 05 04",
+      "waste_description": "Terre e rocce da scavo — area ex stabilimento trattamento superficiale metalli (uso commerciale/industriale)",
+      "physical_state": "Solido non polverulento",
+      "digestion_method": "UNI EN 13657:2004",
+      "notes": "Sondaggi S2-S5, campione composito 0,5 - 2,5 m"
+    },
+    "parameters": [
+      { "analyte_key": "arsenico", "result_raw": "32", "operator": null, "value": 32, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "cadmio", "result_raw": "6,0", "operator": null, "value": 6.0, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "cromo_totale", "result_raw": "320", "operator": null, "value": 320, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "mercurio", "result_raw": "2,8", "operator": null, "value": 2.8, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "nichel", "result_raw": "140", "operator": null, "value": 140, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "piombo", "result_raw": "480", "operator": null, "value": 480, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "rame", "result_raw": "210", "operator": null, "value": 210, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "zinco", "result_raw": "950", "operator": null, "value": 950, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "idrocarburi_c12plus", "result_raw": "610", "operator": null, "value": 610, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN ISO 16703:2011" },
+      { "analyte_key": "ipa_somma", "result_raw": "42", "operator": null, "value": 42, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 15527:2008" },
+      { "analyte_key": "pfoa_somma", "result_raw": "4,2", "operator": null, "value": 4.2, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI CEN/TS 15968:2010" },
+      { "analyte_key": "pfhxs_somma", "result_raw": "0,6", "operator": null, "value": 0.6, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI CEN/TS 15968:2010" },
+      { "analyte_key": "pcdd_pcdf_teq", "result_raw": "< 0,0001", "operator": "<", "value": 0.0001, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 1613B:1994" }
+    ]
+  },
+  "expected": {
+    "verifications": [
+      {
+        "limit_table_id": "tab5-121-2020-colB",
+        "line_id": "L1-soil-washing",
+        "counts": { "conforme": 10, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 3 },
+        "non_applicabili": [
+          { "analyte_key": "pfoa_somma", "reason": "Analita non presente in Tabella 5 — valutato dal vincolo POP" },
+          { "analyte_key": "pfhxs_somma", "reason": "Analita non presente in Tabella 5 — valutato dal vincolo POP" },
+          { "analyte_key": "pcdd_pcdf_teq", "reason": "Analita non presente in Tabella 5 — valutato dal vincolo POP" }
+        ],
+        "overall": "conforme"
+      },
+      {
+        "limit_table_id": "pop-reg-2019-1021",
+        "line_id": "L1-soil-washing",
+        "counts": { "conforme": 2, "non_conforme": 1, "non_determinato": 0, "non_applicabile": 10 },
+        "non_conformi": [
+          { "analyte_key": "pfoa_somma", "value": 4.2, "limit": 1 }
+        ],
+        "overall": "non_conforme",
+        "blocking": true
+      }
+    ],
+    "decision": {
+      "esito": "non_accettabile_vincolo_pop",
+      "motivazione": "Conforme a Tabella 5 colonna B, ma PFOA e suoi sali 4,2 mg/kg > 1 mg/kg (All. IV Reg. (UE) 2019/1021, agg. 2022/2400): obbligo di distruzione o trasformazione irreversibile del contenuto di POP. Non ammissibile a recupero di materia né a conferimento in discarica.",
+      "azioni_suggerite": [
+        "Indirizzare a impianto autorizzato al trattamento distruttivo (es. incenerimento D10)",
+        "Verificare con il produttore l'estensione della contaminazione PFAS (speciazione completa)"
+      ]
+    }
+  }
+}

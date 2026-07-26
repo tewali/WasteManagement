@@ -1,0 +1,32 @@
+{
+  "organization": {
+    "id": "org-valli",
+    "name": "Valli S.p.A.",
+    "vat_number": "IT01234567890",
+    "address": "Via dell'Ambiente 1, 25100 Brescia (BS)",
+    "locale": "it-IT"
+  },
+  "users": [
+    {
+      "id": "usr-fparolini",
+      "name": "Federico Parolini",
+      "email": "f.parolini@vallispa.example",
+      "role": "admin",
+      "title": "Responsabile Tecnico Impianto"
+    },
+    {
+      "id": "usr-gmoretti",
+      "name": "Giulia Moretti",
+      "email": "g.moretti@vallispa.example",
+      "role": "operator",
+      "title": "Tecnico Ambientale — omologhe e conformità"
+    },
+    {
+      "id": "usr-mdeluca",
+      "name": "Marco De Luca",
+      "email": "m.deluca@vallispa.example",
+      "role": "acceptance",
+      "title": "Addetto Accettazione / Pesa"
+    }
+  ]
+}

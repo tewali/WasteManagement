@@ -1,0 +1,31 @@
+{
+  "id": "eluato-discarica-non-pericolosi",
+  "name": "Ammissibilità in discarica per rifiuti non pericolosi — eluato (UNI EN 12457-2, L/S 10 l/kg)",
+  "normativa": "D.Lgs. 36/2003 come modificato dal D.Lgs. 121/2020",
+  "source_ref": "Valori di sviluppo — da validare",
+  "status": "SIMULATED_DA_VALIDARE",
+  "version": 1,
+  "valid_from": "2020-10-04",
+  "valid_to": null,
+  "basis": "eluate",
+  "unit": "mg/l",
+  "entries": [
+    { "analyte_key": "arsenico_el", "limit": 0.2 },
+    { "analyte_key": "antimonio_el", "limit": 0.07 },
+    { "analyte_key": "bario_el", "limit": 10 },
+    { "analyte_key": "cadmio_el", "limit": 0.1 },
+    { "analyte_key": "cromo_totale_el", "limit": 1 },
+    { "analyte_key": "mercurio_el", "limit": 0.02 },
+    { "analyte_key": "molibdeno_el", "limit": 1 },
+    { "analyte_key": "nichel_el", "limit": 1 },
+    { "analyte_key": "piombo_el", "limit": 1 },
+    { "analyte_key": "rame_el", "limit": 5 },
+    { "analyte_key": "selenio_el", "limit": 0.05 },
+    { "analyte_key": "zinco_el", "limit": 5 },
+    { "analyte_key": "fluoruri_el", "limit": 15 },
+    { "analyte_key": "cloruri_el", "limit": 1500 },
+    { "analyte_key": "solfati_el", "limit": 2000 },
+    { "analyte_key": "doc_el", "limit": 80 },
+    { "analyte_key": "tds_el", "limit": 6000 }
+  ]
+}

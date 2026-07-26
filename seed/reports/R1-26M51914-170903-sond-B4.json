@@ -1,0 +1,72 @@
+{
+  "id": "R1",
+  "scenario": "Caso del mock-up UI: terreno da sondaggio B4, EER 17 09 03*, verifica Tabella 5 col. A per linea Soil Washing. Atteso: 18 conformi / 2 non conformi (Mercurio, Zinco) / 3 non determinati (LOQ > limite).",
+  "pdf": "pdf/R1-26M51914_170903_sond_B4.pdf",
+  "producer_id": "prod-bonifiche-nord",
+  "extraction": {
+    "header": {
+      "report_number": "26M51914",
+      "laboratory": "LabAnalysis S.r.l.",
+      "sampling_date": "2026-05-12",
+      "report_date": "2026-05-19",
+      "sampled_by": "Tecnico incaricato dal committente",
+      "eer_declared": "17 09 03*",
+      "waste_description": "Rifiuti dell'attività di costruzione e demolizione contenenti sostanze pericolose — terreno e rocce da scavo con tracce di contaminazione",
+      "physical_state": "Solido non polverulento",
+      "digestion_method": "UNI EN 13657:2004",
+      "notes": "Sondaggio B4 — Profondità 2,0 - 3,0 m"
+    },
+    "parameters": [
+      { "analyte_key": "arsenico", "result_raw": "9,2", "operator": null, "value": 9.2, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "cadmio", "result_raw": "0,45", "operator": null, "value": 0.45, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "cobalto", "result_raw": "12", "operator": null, "value": 12, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "cromo_totale", "result_raw": "38", "operator": null, "value": 38, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "cromo_vi", "result_raw": "< 5", "operator": "<", "value": 5, "unit": "mg/kg s.s.", "basis": "total", "method": "CNR IRSA 16 Q64" },
+      { "analyte_key": "mercurio", "result_raw": "1,2", "operator": null, "value": 1.2, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "nichel", "result_raw": "28", "operator": null, "value": 28, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "piombo", "result_raw": "32", "operator": null, "value": 32, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "rame", "result_raw": "63", "operator": null, "value": 63, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "selenio", "result_raw": "< 0,5", "operator": "<", "value": 0.5, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "stagno", "result_raw": "0,4", "operator": null, "value": 0.4, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "tallio", "result_raw": "< 0,3", "operator": "<", "value": 0.3, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "berillio", "result_raw": "0,8", "operator": null, "value": 0.8, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "antimonio", "result_raw": "2,1", "operator": null, "value": 2.1, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-MS" },
+      { "analyte_key": "vanadio", "result_raw": "41", "operator": null, "value": 41, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "zinco", "result_raw": "210", "operator": null, "value": 210, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 13657:2004 + ICP-OES" },
+      { "analyte_key": "amianto", "result_raw": "< 2000", "operator": "<", "value": 2000, "unit": "mg/kg s.s.", "basis": "total", "method": "DM 06/09/1994 All. 1 — DRX" },
+      { "analyte_key": "idrocarburi_c12minus", "result_raw": "< 1", "operator": "<", "value": 1, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 5021A + EPA 8015D" },
+      { "analyte_key": "idrocarburi_c12plus", "result_raw": "< 10", "operator": "<", "value": 10, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN ISO 16703:2011" },
+      { "analyte_key": "benzene", "result_raw": "< 0,05", "operator": "<", "value": 0.05, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 5021A + EPA 8260D" },
+      { "analyte_key": "toluene", "result_raw": "< 0,05", "operator": "<", "value": 0.05, "unit": "mg/kg s.s.", "basis": "total", "method": "EPA 5021A + EPA 8260D" },
+      { "analyte_key": "ipa_somma", "result_raw": "3,1", "operator": null, "value": 3.1, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 15527:2008" },
+      { "analyte_key": "pcb", "result_raw": "< 0,1", "operator": "<", "value": 0.1, "unit": "mg/kg s.s.", "basis": "total", "method": "UNI EN 15308:2008" }
+    ]
+  },
+  "expected": {
+    "verifications": [
+      {
+        "limit_table_id": "tab5-121-2020-colA",
+        "line_id": "L1-soil-washing",
+        "counts": { "conforme": 18, "non_conforme": 2, "non_determinato": 3, "non_applicabile": 0 },
+        "non_conformi": [
+          { "analyte_key": "mercurio", "value": 1.2, "limit": 1 },
+          { "analyte_key": "zinco", "value": 210, "limit": 150 }
+        ],
+        "non_determinati": [
+          { "analyte_key": "cromo_vi", "reason": "LOQ (5) superiore al limite (2)" },
+          { "analyte_key": "amianto", "reason": "LOQ (2000) superiore al limite (1000)" },
+          { "analyte_key": "pcb", "reason": "LOQ (0,1) superiore al limite (0,06)" }
+        ],
+        "overall": "non_conforme"
+      }
+    ],
+    "decision": {
+      "esito": "non_accettabile",
+      "motivazione": "Non conforme ai limiti Tabella 5 colonna A per Mercurio (1,2 > 1 mg/kg) e Zinco (210 > 150 mg/kg): non accettabile sulla linea Soil Washing per l'ottenimento di EoW a destinazione verde/residenziale.",
+      "azioni_suggerite": [
+        "Ripetere la verifica contro Tabella 5 colonna B (uso commerciale/industriale)",
+        "Richiedere al laboratorio la ripetizione di Cromo VI, Amianto e PCB con LOQ adeguato ai limiti di colonna A"
+      ]
+    }
+  }
+}

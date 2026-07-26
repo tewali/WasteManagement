@@ -1,0 +1,22 @@
+{
+  "id": "pop-reg-2019-1021",
+  "name": "Vincolo POP — limiti di gestione rifiuti (All. IV Reg. (UE) 2019/1021, agg. Reg. (UE) 2022/2400)",
+  "normativa": "Regolamento (UE) 2019/1021, Allegato IV, come modificato dal Regolamento (UE) 2022/2400",
+  "source_ref": "Valori di sviluppo — da validare articolo per articolo",
+  "status": "SIMULATED_DA_VALIDARE",
+  "version": 1,
+  "valid_from": "2023-06-10",
+  "valid_to": null,
+  "basis": "total",
+  "unit": "mg/kg s.s.",
+  "blocking": true,
+  "blocking_consequence": "Superamento = il rifiuto NON può essere avviato a recupero di materia né a discarica: obbligo di distruzione o trasformazione irreversibile del contenuto di POP (es. incenerimento autorizzato D10).",
+  "entries": [
+    { "analyte_key": "pcdd_pcdf_teq", "limit": 0.005, "kind": "sum", "notes": "5 µg TEQ/kg — somma PCDD/PCDF (+ dl-PCB per Reg. 2022/2400)" },
+    { "analyte_key": "pfoa_somma", "limit": 1, "kind": "sum", "notes": "PFOA e suoi sali; composti correlati al PFOA: 40 mg/kg" },
+    { "analyte_key": "pfhxs_somma", "limit": 1, "kind": "sum" },
+    { "analyte_key": "pfas_somma", "limit": 50, "kind": "sum", "notes": "Voce aggregata di screening (PFOS 50 mg/kg); la valutazione puntuale richiede speciazione" },
+    { "analyte_key": "pcb", "limit": 50, "kind": "sum", "notes": "PCB totali come POP — soglia distinta dai limiti CSC" },
+    { "analyte_key": "pesticidi_organoclorurati_somma", "limit": 50, "kind": "sum", "notes": "Aldrin, dieldrin, endrin, DDT, clordano, eptacloro, HCB, mirex, toxafene — somma di screening" }
+  ]
+}
