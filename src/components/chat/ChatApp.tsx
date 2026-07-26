@@ -453,6 +453,20 @@ function TypingBubble() {
 }
 
 function AnnaAvatar() {
+  const [hasImage, setHasImage] = useState(true);
+  if (hasImage) {
+    return (
+      <span className="mt-1 block h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-brand/40">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/anna.jpg"
+          alt="Anna"
+          className="h-full w-full object-cover object-top"
+          onError={() => setHasImage(false)}
+        />
+      </span>
+    );
+  }
   return (
     <span className="mt-1 block h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-brand/40">
       <svg viewBox="0 0 32 32" className="h-full w-full">

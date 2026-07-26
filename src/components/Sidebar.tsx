@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   IconBook,
   IconChart,
@@ -27,21 +28,11 @@ export default function Sidebar() {
   return (
     <aside className="flex w-[335px] shrink-0 flex-col bg-forest-900 text-white">
       {/* Logo */}
-      <div className="px-6 pb-4 pt-5">
-        <div className="flex items-center gap-2.5">
-          <IconLeaf size={30} />
-          <div className="text-[21px] font-extrabold tracking-wide">
-            VALLI SPA <span className="text-brand-bright">AI</span>
-          </div>
-        </div>
-        <div className="mt-1 pl-[40px] text-[8.5px] font-medium uppercase tracking-[0.14em] text-emerald-200/70">
-          L&apos;intelligenza al servizio dell&apos;ambiente
-        </div>
-      </div>
+      <BrandLogo />
 
-      {/* Anna hero */}
+      {/* Anna hero: real photo if public/anna.jpg exists, SVG placeholder otherwise */}
       <div className="relative mx-0 h-[350px] overflow-hidden">
-        <AnnaPortrait />
+        <AnnaHero />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-forest-900 to-transparent" />
       </div>
 
@@ -90,6 +81,56 @@ export default function Sidebar() {
       </button>
     </aside>
   );
+}
+
+/** Company logo: uses public/valli-logo.png when present, falls back to the SVG wordmark. */
+function BrandLogo() {
+  const [hasImage, setHasImage] = useState(true);
+  return (
+    <div className="px-6 pb-4 pt-5">
+      {hasImage ? (
+        <div className="flex items-end gap-2">
+          <span className="rounded-md bg-white/95 px-2 py-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/valli-logo.png"
+              alt="Valli S.p.A."
+              className="h-7 w-auto"
+              onError={() => setHasImage(false)}
+            />
+          </span>
+          <span className="pb-0.5 text-[19px] font-extrabold leading-none text-brand-bright">AI</span>
+        </div>
+      ) : (
+        <div className="flex items-center gap-2.5">
+          <IconLeaf size={30} />
+          <div className="text-[21px] font-extrabold tracking-wide">
+            VALLI SPA <span className="text-brand-bright">AI</span>
+          </div>
+        </div>
+      )}
+      <div className="mt-1.5 text-[8.5px] font-medium uppercase tracking-[0.14em] text-emerald-200/70">
+        L&apos;intelligenza al servizio dell&apos;ambiente
+      </div>
+    </div>
+  );
+}
+
+/** Anna hero: uses public/anna.jpg when present, falls back to the stylized SVG. */
+function AnnaHero() {
+  const [hasImage, setHasImage] = useState(true);
+  if (hasImage) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/anna.jpg"
+        alt="Anna — AI Assistant"
+        className="h-full w-full object-cover object-top"
+        onError={() => setHasImage(false)}
+      />
+    );
+  }
+  return <AnnaPortrait />;
 }
 
 /** Stylized portrait placeholder (no real photo in the MVP build). */
