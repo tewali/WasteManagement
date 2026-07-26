@@ -23,17 +23,23 @@ import {
   IconChevronD,
   IconClock,
   IconDoc,
+  IconGauge,
   IconHistory,
   IconLeaf,
   IconPlant,
+  IconTruck,
+  IconUsers,
 } from "./icons";
 
 const NAV = [
   { href: "/", label: "Chat con Anna", icon: IconChat },
+  { href: "/dashboard", label: "Dashboard", icon: IconGauge },
   { href: "/conversazioni", label: "Le mie chat", icon: IconHistory },
   { href: "/documenti", label: "I miei documenti", icon: IconDoc },
   { href: "/analisi", label: "Analisi e confronti", icon: IconChart },
   { href: "/omologhe", label: "Omologhe", icon: IconCheckSquare },
+  { href: "/movimenti", label: "Movimenti e FIR", icon: IconTruck },
+  { href: "/portale-clienti", label: "Portale clienti", icon: IconUsers },
   { href: "/impianti", label: "Impianti e linee", icon: IconPlant },
   { href: "/normativa", label: "Normativa e procedure", icon: IconBook },
   { href: "/storico", label: "Storico richieste", icon: IconClock },

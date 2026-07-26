@@ -59,11 +59,32 @@ to Render Postgres in Phase 2; uploaded documents stay on the disk.
 - **Normativa search**: keyword filter over the normative catalog and limit
   tables (full RAG lands with the Postgres migration).
 
+**Phase 3 — integrations & scale** (this branch):
+
+- **Movimenti e FIR**: incoming conferimenti with auto-numbered FIR, weighbridge
+  weights, acceptance/rejection, and a derived registro cronologico (progressive
+  per year, CSV export). RENTRI transmission is **simulated**: the FIR digitale
+  payload (DM 59/2023, simplified) is generated and archived, nothing leaves the
+  app.
+- **Weighbridge import**: CSV from the pesa (`fir_number;gross_kg;tare_kg`,
+  template downloadable) matches movements by FIR, records the net weight and
+  flags >5% discrepancies vs the declared quantity (bell notification).
+- **Portale clienti**: producer accounts (`role: producer`) get a dedicated
+  portal at `/portale` to upload lab reports and track outcomes; staff review
+  submissions in **Portale clienti** — one-click standard verification or full
+  review in chat with Anna. Demo customer:
+  `m.rossi@bianchicostruzioni.example` / `cliente-demo`.
+- **Dashboard**: KPIs and charts (monthly accepted tonnage, verification
+  outcomes, top EER codes, line capacity utilization) derived from movements,
+  verifications and omologhe. Multi-plant reporting lands with the Postgres
+  tenancy migration.
+
 **Authentication:** Auth.js (next-auth v5) with email/password credentials —
-register at `/register`, login at `/login`; all pages and APIs require a session.
-A demo account is created on first run: `a.parolini@vallispa.example` /
-`valli-demo`. Set `AUTH_SECRET` in production (render.yaml generates one).
-OIDC/SSO providers slot into `src/auth.ts` in Phase 2.
+register at `/register` (internal operator or producer account), login at
+`/login`; all pages and APIs require a session, and producer accounts are
+confined to the customer portal. A demo account is created on first run:
+`a.parolini@vallispa.example` / `valli-demo`. Set `AUTH_SECRET` in production
+(render.yaml generates one). OIDC/SSO providers slot into `src/auth.ts`.
 
 ### Run
 
