@@ -15,8 +15,10 @@
 // any AI failure the caller falls back to the deterministic demo path.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { suggestLines } from "./line-suggest";
 import { runVerification } from "./rules-engine";
 import { analyteLabel, defaultLineId, getSeed, isBlockingTable, standardTableId } from "./seed";
+import { store } from "./store";
 import type {
   AnalysisRecord,
   DocumentRecord,
@@ -187,14 +189,18 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
   const tables = seed.tables
     .map((t) => `- id "${t.id}": ${t.name} [base: ${t.basis}] — ${t.normativa}`)
     .join("\n");
-  const lines = seed.lines
+  const plantLines = store.lines();
+  const lines = plantLines
     .map((l) => `- id "${l.id}": ${l.name} (${l.operation}) — EER ammessi: ${l.admissible_eer.join(", ")}`)
     .join("\n");
-  const defaultLine = seed.lines.find((l) => l.id === defaultLineId())!;
-  const standardTable = seed.tables.find((t) => t.id === standardTableId(defaultLine.id))!;
+  const defaultLine =
+    plantLines.find((l) => l.id === defaultLineId(plantLines)) ?? plantLines[0];
+  const standardTable = seed.tables.find(
+    (t) => t.id === standardTableId(defaultLine?.id, plantLines),
+  )!;
   const singleLineNote =
-    seed.lines.length === 1
-      ? `\nL'impianto ha un'UNICA linea operativa (${seed.lines[0].name}, id "${seed.lines[0].id}"): assumi sempre questa linea per ogni verifica di accettazione, senza chiederla all'utente.`
+    plantLines.length === 1
+      ? `\nL'impianto ha un'UNICA linea operativa (${plantLines[0].name}, id "${plantLines[0].id}"): assumi sempre questa linea per ogni verifica di accettazione, senza chiederla all'utente.`
       : `\nLinea predefinita: ${defaultLine.name} (id "${defaultLine.id}") — usala quando l'utente non ne indica un'altra.`;
 
   let docContext = "Nessun documento attivo nella conversazione.";
@@ -247,7 +253,8 @@ export async function annaChat(opts: {
 }): Promise<AiChatResult> {
   const seed = getSeed();
   const tableIds = seed.tables.map((t) => t.id);
-  const lineIds = seed.lines.map((l) => l.id);
+  const plantLines = store.lines();
+  const lineIds = plantLines.map((l) => l.id);
 
   const tools: Anthropic.Beta.BetaToolUnion[] = [
     {
@@ -273,9 +280,23 @@ export async function annaChat(opts: {
           line_id: {
             type: "string",
             enum: lineIds,
-            description: `Linea di destinazione; se l'utente non la indica usare "${defaultLineId()}".`,
+            description: `Linea di destinazione; se l'utente non la indica usare "${defaultLineId(plantLines)}".`,
           },
         },
+      },
+    },
+    {
+      name: "suggest_line",
+      description:
+        "Valuta su quali linee dell'impianto il rifiuto del documento attivo può essere accettato: " +
+        "ammissibilità del codice EER, vincolo bloccante POP e verdetto contro ogni tabella limiti della linea. " +
+        "Da chiamare quando l'utente chiede quale linea può accettare il rifiuto o se è accettabile in impianto.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        additionalProperties: false,
+        required: [],
+        properties: {},
       },
     },
   ];
@@ -308,12 +329,42 @@ export async function annaChat(opts: {
       const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
       for (const block of response.content) {
         if (block.type !== "tool_use") continue;
+        if (block.name === "suggest_line") {
+          results.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            ...(opts.analysis
+              ? {
+                  content: JSON.stringify(
+                    suggestLines(opts.analysis).map((s) => ({
+                      linea: s.line.name,
+                      eer_ammesso: s.eer_admissible,
+                      vincolo_pop: s.pop_blocked,
+                      esito: s.esito,
+                      motivo: s.motivo,
+                      tabelle: s.table_results.map((t) => ({
+                        tabella: t.name,
+                        finalita: t.purpose,
+                        esito: t.overall,
+                        conteggi: t.counts,
+                      })),
+                    })),
+                  ),
+                }
+              : {
+                  content: "Nessun documento attivo: chiedere all'utente di caricare un rapporto di prova.",
+                  is_error: true,
+                }),
+          });
+          continue;
+        }
         const input = block.input as { table_id: string; line_id: string };
         // Resolve the defaults the model is allowed to leave implicit: the
         // line's standard limits, on the default line.
-        const line = seed.lines.find((l) => l.id === input.line_id)?.id ?? defaultLineId();
+        const line =
+          plantLines.find((l) => l.id === input.line_id)?.id ?? defaultLineId(plantLines);
         const requestedTableId =
-          input.table_id === "standard" ? standardTableId(line) : input.table_id;
+          input.table_id === "standard" ? standardTableId(line, plantLines) : input.table_id;
         const table = seed.tables.find((t) => t.id === requestedTableId);
         if (table && opts.analysis) {
           const verification = runVerification(
@@ -372,8 +423,8 @@ export async function annaChat(opts: {
       verifications.length > 0 &&
       verifications.every((v) => isBlockingTable(v.limit_table_id))
     ) {
-      const line = lineId ?? defaultLineId();
-      const standard = seed.tables.find((t) => t.id === standardTableId(line));
+      const line = lineId ?? defaultLineId(plantLines);
+      const standard = seed.tables.find((t) => t.id === standardTableId(line, plantLines));
       if (standard) {
         verifications.unshift(
           runVerification(opts.analysis.parameters, standard, analyteLabel, line),

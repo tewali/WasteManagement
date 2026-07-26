@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { effectiveStatus } from "@/lib/omologhe";
 import { store } from "@/lib/store";
 
 // Notification feed: derived from app activity (verifications + uploads),
@@ -37,6 +38,21 @@ export async function GET() {
       detail: d.filename,
       href: chatFor(d.id),
     })),
+    // Omologhe expiring within 30 days (or expired) — Phase 2.
+    ...store
+      .omologhe()
+      .filter((o) => ["in_scadenza", "scaduta"].includes(effectiveStatus(o)))
+      .map((o) => ({
+        id: `omo_${o.id}_${o.valid_to}`,
+        time: new Date().toISOString().slice(0, 11) + "00:00:00.000Z",
+        tone: effectiveStatus(o) === "scaduta" ? "ko" : "info",
+        title:
+          effectiveStatus(o) === "scaduta"
+            ? "Omologa SCADUTA — richiedere nuova caratterizzazione"
+            : "Omologa in scadenza entro 30 giorni",
+        detail: `${o.producer_name} · EER ${o.eer} · valida fino al ${new Date(o.valid_to + "T00:00:00").toLocaleDateString("it-IT")}`,
+        href: "/omologhe",
+      })),
   ]
     .sort((a, b) => b.time.localeCompare(a.time))
     .slice(0, 20);

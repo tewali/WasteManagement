@@ -41,6 +41,24 @@ Persistence and file storage live in `DATA_DIR` (default `.data/`; on Render, th
 persistent disk mounted at `/var/data` — see `render.yaml`). Database records move
 to Render Postgres in Phase 2; uploaded documents stay on the disk.
 
+**Phase 2 — plant operations** (this branch):
+
+- **Impianti e linee** is a full configuration UI: add/edit/delete lines with
+  admissible EER codes, limit-table bindings (blocking POP flagged) and
+  capacity; the assistant reads the configured lines live.
+- **Line suggestion**: ask Anna "quale linea può accettare questo rifiuto?" —
+  deterministic evaluation per line (EER admissibility → blocking POP layer →
+  verdict against each bound table), exposed as a chat tool for the AI
+  assistant and covered by tests.
+- **Omologhe**: producer/waste homologation records with validity periods,
+  draft→active→expiring→expired lifecycle, renewal, and expiry notifications
+  (≤30 days) in the bell.
+- **PDF export**: every verification in Analisi e confronti downloads as a
+  formatted esito di conformità (pdf-lib) with the simulated-tables
+  disclaimer.
+- **Normativa search**: keyword filter over the normative catalog and limit
+  tables (full RAG lands with the Postgres migration).
+
 **Authentication:** Auth.js (next-auth v5) with email/password credentials —
 register at `/register`, login at `/login`; all pages and APIs require a session.
 A demo account is created on first run: `a.parolini@vallispa.example` /

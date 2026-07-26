@@ -120,6 +120,24 @@ export interface VerificationResult {
   blocking_consequence?: string;
 }
 
+// ---- omologhe (Phase 2) ------------------------------------------------
+
+export interface OmologaRecord {
+  id: string;
+  producer_name: string;
+  eer: string;
+  waste_description: string;
+  line_id: string;
+  document_id: string | null;
+  analysis_id: string | null;
+  status: "bozza" | "attiva";
+  valid_from: string; // ISO date
+  valid_to: string; // ISO date
+  created_at: string;
+  created_by: string;
+  notes?: string;
+}
+
 // ---- persisted records -------------------------------------------------
 
 export interface DocumentRecord {

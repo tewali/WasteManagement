@@ -5,8 +5,10 @@
 // this module becomes the tool layer the model calls; the deterministic
 // fallback keeps the demo fully functional offline.
 
+import { suggestLines } from "./line-suggest";
 import { runVerification } from "./rules-engine";
-import { analyteLabel, defaultLineId, getLine, getSeed, getTable, standardTableId } from "./seed";
+import { analyteLabel, defaultLineId, getSeed, getTable, standardTableId } from "./seed";
+import { store } from "./store";
 import type {
   AnalysisRecord,
   DocumentRecord,
@@ -48,7 +50,7 @@ function wantsVerification(message: string): boolean {
 
 function inquadramento(analysis: AnalysisRecord, lineId: string | null, table: { name: string; normativa: string }): MessageBlock {
   const eer = analysis.header.eer_declared;
-  const line = lineId ? getLine(lineId) : null;
+  const line = lineId ? store.line(lineId) : null;
   return {
     type: "inquadramento",
     items: [
@@ -61,7 +63,7 @@ function inquadramento(analysis: AnalysisRecord, lineId: string | null, table: {
 }
 
 function conclusione(v: VerificationResult, lineId: string | null): MessageBlock {
-  const line = lineId ? getLine(lineId) : null;
+  const line = lineId ? store.line(lineId) : null;
   const tableShort = v.limit_table_name.split("(")[0].trim();
   if (v.blocking) {
     const nc = v.verdicts.filter((x) => x.esito === "non_conforme");
@@ -119,9 +121,11 @@ export function annaRespond(opts: {
 }): AnnaReply {
   const { message, analysis, document } = opts;
   const seed = getSeed();
-  const lineId = detectLineId(message) ?? opts.defaultLineId ?? defaultLineId();
+  const plantLines = store.lines();
+  const lineId = detectLineId(message) ?? opts.defaultLineId ?? defaultLineId(plantLines);
   // No table named in the message and none active: the line's standard limits.
-  const tableId = detectTableId(message) ?? opts.defaultTableId ?? standardTableId(lineId);
+  const tableId =
+    detectTableId(message) ?? opts.defaultTableId ?? standardTableId(lineId, plantLines);
 
   if (!analysis || !document) {
     return {
@@ -142,8 +146,39 @@ export function annaRespond(opts: {
     };
   }
 
+  // Line suggestion: "quale linea può accettarlo?"
+  if (/quale linea|linee? (può|possono)|su che linea|dove (può|posso) (accettar|conferir)/i.test(message)) {
+    const suggestions = suggestLines(analysis);
+    const ESITO_LABEL: Record<string, string> = {
+      accettabile: "✅ Accettabile",
+      accettabile_con_riserva: "⚠️ Accettabile con riserva",
+      non_accettabile: "⛔ Non accettabile",
+      eer_non_ammesso: "⛔ EER non ammesso",
+    };
+    const text =
+      `**Valutazione di accettabilità per "${document.filename}"** (CER ${analysis.header.eer_declared}):\n\n` +
+      suggestions
+        .map(
+          (s) =>
+            `- **${s.line.name}** — ${ESITO_LABEL[s.esito]}. ${s.motivo}` +
+            (s.table_results.length
+              ? `\n  ${s.table_results
+                  .map((t) => `${t.name}: ${t.overall === "conforme" ? "conforme" : "non conforme"}`)
+                  .join(" · ")}`
+              : ""),
+        )
+        .join("\n");
+    return {
+      blocks: [{ type: "text", text }],
+      verification: null,
+      verifications: [],
+      table_id: tableId,
+      line_id: lineId,
+    };
+  }
+
   if (wantsVerification(message) || detectTableId(message)) {
-    const table = getTable(tableId) ?? getTable(standardTableId(lineId))!;
+    const table = getTable(tableId) ?? getTable(standardTableId(lineId, plantLines))!;
     const verification = runVerification(analysis.parameters, table, analyteLabel, lineId ?? undefined);
     const colDesc = table.id.endsWith("colA")
       ? " (colonna A - siti ad uso verde pubblico, privato e residenziale)"
@@ -163,7 +198,7 @@ export function annaRespond(opts: {
   }
 
   // Generic assistant answer with pointers.
-  const line = getLine(lineId);
+  const line = store.line(lineId);
   return {
     blocks: [
       {
