@@ -47,8 +47,8 @@ export default function Sidebar() {
       <BrandLogo />
 
       {/* Anna hero: real photo if public/anna.png exists, SVG placeholder otherwise.
-          Height scales with the viewport so the nav keeps ~50% on desktop. */}
-      <div className="relative mx-0 h-[22vh] max-h-[300px] min-h-[130px] shrink-0 overflow-hidden">
+          Height scales with the viewport; on desktop (lg+) it stays at least 300px. */}
+      <div className="relative mx-0 h-[22vh] max-h-[300px] min-h-[130px] shrink-0 overflow-hidden lg:h-[36vh] lg:max-h-[560px] lg:min-h-[300px]">
         <AnnaHero />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-forest-900 to-transparent" />
       </div>
@@ -124,7 +124,10 @@ function UserFooter() {
             Profilo utente
           </Link>
           <button
-            onClick={() => void signOut({ callbackUrl: "/login" })}
+            // redirect: false + relative navigation: Auth.js would otherwise
+            // redirect to the server-inferred origin, which is localhost
+            // behind Render's proxy.
+            onClick={() => void signOut({ redirect: false }).then(() => window.location.assign("/login"))}
             className="block w-full border-t border-white/10 px-4 py-3 text-left text-[13px] font-medium text-red-300 hover:bg-forest-700 hover:text-red-200"
           >
             Esci
