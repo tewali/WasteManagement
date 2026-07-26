@@ -41,23 +41,23 @@ function client(): Anthropic {
 
 // Create with server-side refusal fallbacks; if the org doesn't have the
 // beta (400), retry the identical request without it rather than failing.
+// Streaming + finalMessage() so large max_tokens never hits the SDK's
+// non-streaming timeout guard.
 async function createMessage(
   params: Omit<Anthropic.Beta.Messages.MessageCreateParamsNonStreaming, "model" | "betas" | "fallbacks">,
 ) {
-  try {
-    return await client().beta.messages.create({
-      model: MODEL,
-      betas: [FALLBACK_BETA],
-      fallbacks: "default",
-      ...params,
-    } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming);
-  } catch (e) {
-    if (e instanceof Anthropic.BadRequestError) {
-      return await client().beta.messages.create({
+  const attempt = (withFallbacks: boolean) =>
+    client()
+      .beta.messages.stream({
         model: MODEL,
+        ...(withFallbacks ? { betas: [FALLBACK_BETA], fallbacks: "default" } : {}),
         ...params,
-      } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming);
-    }
+      } as Anthropic.Beta.Messages.MessageCreateParamsNonStreaming)
+      .finalMessage();
+  try {
+    return await attempt(true);
+  } catch (e) {
+    if (e instanceof Anthropic.BadRequestError) return await attempt(false);
     throw e;
   }
 }

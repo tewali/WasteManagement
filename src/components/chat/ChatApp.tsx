@@ -224,7 +224,7 @@ export default function ChatApp({
         analysis: AnalysisRecord;
         extraction_source: "claude" | "fixture";
         ai_enabled: boolean;
-        ai_error: string | null;
+        ai_failed: boolean;
       };
       setDoc(data.document);
       setAnalysis(data.analysis);
@@ -237,7 +237,8 @@ export default function ChatApp({
         text: `Ho caricato il rapporto di prova "${file.name}": puoi analizzarlo e verificarne la conformità?`,
         attachment: { document_id: data.document.id, filename: file.name },
       });
-      // Be explicit when the panel shows demo data instead of a real extraction.
+      // Be explicit when the panel shows demo data instead of a real extraction —
+      // in plain language, without technical error details (those go to the server log).
       if (data.extraction_source === "fixture") {
         pushMessage({
           id: mid(),
@@ -246,11 +247,9 @@ export default function ChatApp({
           blocks: [
             {
               type: "text",
-              text: data.ai_error
-                ? `⚠️ **Estrazione AI non riuscita** (${data.ai_error}): nel pannello a destra sono mostrati **dati dimostrativi**, non il contenuto del PDF caricato. Riprovi o verifichi il documento.`
-                : data.ai_enabled
-                  ? `⚠️ Questo formato non è supportato dall'estrazione AI (solo PDF): nel pannello a destra sono mostrati **dati dimostrativi**.`
-                  : `⚠️ **Estrazione AI non attiva** (manca \`ANTHROPIC_API_KEY\`): nel pannello a destra sono mostrati **dati dimostrativi**, non il contenuto del PDF caricato.`,
+              text: data.ai_failed
+                ? `⚠️ Non sono riuscita a leggere il documento in questo momento: nel pannello a destra sono mostrati **dati dimostrativi**. Riprovi il caricamento tra qualche istante.`
+                : `⚠️ L'estrazione automatica non è configurata su questo ambiente: nel pannello a destra sono mostrati **dati dimostrativi**. Un amministratore può attivarla dalle impostazioni del server.`,
             },
           ],
         });

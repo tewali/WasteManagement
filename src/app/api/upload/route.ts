@@ -46,14 +46,16 @@ export async function POST(req: NextRequest) {
 
   let extraction: Pick<AnalysisRecord, "header" | "parameters"> | null = null;
   let source: "claude" | "fixture" = "fixture";
-  let aiError: string | null = null;
+  let aiFailed = false;
 
-  if (aiEnabled() && file.name.toLowerCase().endsWith(".pdf")) {
+  if (aiEnabled()) {
     try {
       extraction = await extractFromPdf(buffer, file.name);
       source = "claude";
     } catch (e) {
-      aiError = e instanceof Error ? e.message : String(e);
+      // Technical detail stays in the server log; the user gets a plain notice.
+      console.error("[upload] estrazione AI non riuscita:", e);
+      aiFailed = true;
     }
   }
 
@@ -90,6 +92,6 @@ export async function POST(req: NextRequest) {
     analysis,
     extraction_source: source,
     ai_enabled: aiEnabled(),
-    ai_error: aiError,
+    ai_failed: aiFailed,
   });
 }
