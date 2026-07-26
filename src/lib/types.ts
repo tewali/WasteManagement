@@ -134,6 +134,7 @@ export interface AnalysisRecord {
   header: ReportHeader;
   parameters: ReportParameter[];
   edited: boolean;
+  extraction_source?: "claude" | "fixture";
 }
 
 export interface VerificationRecord extends VerificationResult {

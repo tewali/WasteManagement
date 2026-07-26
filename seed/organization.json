@@ -8,9 +8,9 @@
   },
   "users": [
     {
-      "id": "usr-fparolini",
-      "name": "Federico Parolini",
-      "email": "f.parolini@vallispa.example",
+      "id": "usr-aparolini",
+      "name": "Aurora Parolini",
+      "email": "a.parolini@vallispa.example",
       "role": "admin",
       "title": "Responsabile Tecnico Impianto"
     },

@@ -14,6 +14,7 @@ import DocPanel from "../panel/DocPanel";
 import MessageBlocks from "./EsitoCard";
 import {
   IconCheckSquare,
+  IconChevronL,
   IconDoc,
   IconPdf,
   IconRefresh,
@@ -53,9 +54,11 @@ const mid = () => `m${Date.now()}_${seq++}`;
 export default function ChatApp({
   tables,
   lines,
+  initialConversationId,
 }: {
   tables: TableOpt[];
   lines: LineOpt[];
+  initialConversationId?: string | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -77,10 +80,18 @@ export default function ChatApp({
   const dragDepth = useRef(0);
   const persistState = useRef({ conversationId, doc, tableId, lineId });
   persistState.current = { conversationId, doc, tableId, lineId };
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  messagesRef.current = messages;
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, busy]);
+
+  // Deep link from the sidebar conversation list (/?c=<id>).
+  useEffect(() => {
+    if (initialConversationId) void openConversation(initialConversationId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialConversationId]);
 
   // Persist the conversation (and its auto-title) after every exchange.
   useEffect(() => {
@@ -139,6 +150,22 @@ export default function ChatApp({
       if (!opts?.silentUser) {
         pushMessage({ id: mid(), role: "user", time: now(), text });
       }
+      // Text-only history so the AI assistant has the conversation context.
+      const history = messagesRef.current.map((m) => ({
+        role: m.role,
+        text:
+          m.text ??
+          (m.blocks ?? [])
+            .map((b) =>
+              b.type === "text"
+                ? b.text
+                : b.type === "esito"
+                  ? `[Esito ${b.verification.limit_table_name.split("(")[0].trim()}: ${b.verification.counts.conforme} conformi, ${b.verification.counts.non_conforme} non conformi, ${b.verification.counts.non_determinato} non determinati]`
+                  : "",
+            )
+            .filter(Boolean)
+            .join("\n"),
+      }));
       setBusy(true);
       try {
         const res = await fetch("/api/chat", {
@@ -146,6 +173,7 @@ export default function ChatApp({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: text,
+            history,
             document_id: activeDoc?.id ?? null,
             table_id: tableId,
             line_id: lineId,
@@ -313,6 +341,17 @@ export default function ChatApp({
             </div>
           )}
 
+          {doc && !panelOpen && (
+            <button
+              onClick={() => setPanelOpen(true)}
+              className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-2 pr-3.5 text-[12px] font-semibold text-slate-700 shadow-panel transition hover:border-brand/50 hover:text-brand-dark"
+              title="Riapri il pannello documento"
+            >
+              <IconPdf size={18} />
+              <span className="max-w-[180px] truncate">{doc.filename}</span>
+              <IconChevronL size={13} className="text-brand-dark" />
+            </button>
+          )}
           <div ref={scroller} data-chat-scroll className="flex-1 overflow-y-auto px-8 py-6">
             <div className="mx-auto max-w-[760px] space-y-5">
               {messages.length === 0 && <EmptyState onDemo={loadDemo} onSuggestion={(s) => submit(s)} />}
@@ -461,7 +500,7 @@ function UserBubble({ m }: { m: ChatMessage }) {
     <div className="fade-up flex justify-end">
       <div className="flex max-w-[85%] items-start gap-2.5">
         <span className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-forest-700 text-[11px] font-bold text-white">
-          FP
+          AP
         </span>
         <div className="rounded-2xl rounded-tl-sm bg-[#d8efdc] px-4 py-3">
           {m.attachment && (

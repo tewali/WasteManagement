@@ -193,7 +193,23 @@ export default function DocPanel({
       {/* Dati estratti */}
       <section className="mx-4 mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-card">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-[12px] font-bold uppercase tracking-wide text-slate-700">Dati estratti</h3>
+          <h3 className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-wide text-slate-700">
+            Dati estratti
+            <span
+              className={`rounded px-1.5 py-0.5 text-[9.5px] font-bold ${
+                analysis.extraction_source === "claude"
+                  ? "bg-brand-pale text-brand-dark"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+              title={
+                analysis.extraction_source === "claude"
+                  ? "Dati estratti dal PDF con Claude"
+                  : "Dati dimostrativi (estrazione AI non attiva)"
+              }
+            >
+              {analysis.extraction_source === "claude" ? "AI" : "DEMO"}
+            </span>
+          </h3>
           {editing ? (
             <div className="flex gap-2">
               <button

@@ -32,6 +32,7 @@ export async function POST(
     header: structuredClone(report.extraction.header),
     parameters: structuredClone(report.extraction.parameters),
     edited: false,
+    extraction_source: "fixture",
   };
   store.addDocument(doc, analysis);
   return NextResponse.json({ document: doc, analysis });

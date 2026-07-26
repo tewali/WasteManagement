@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { aiEnabled, extractFromPdf } from "@/lib/ai";
 import { getSeed } from "@/lib/seed";
 import { newId, store, UPLOAD_DIR } from "@/lib/store";
 import type { AnalysisRecord, DocumentRecord } from "@/lib/types";
 
-// Simulated extraction: uploaded files are matched to a seed fixture
-// (by tokens in the filename); unmatched files fall back to R1 so the
-// demo always works. With ANTHROPIC_API_KEY configured, this is where
-// the real Claude extraction call goes (Phase 1.1).
+// Extraction: with ANTHROPIC_API_KEY set, uploaded PDFs are read by Claude
+// (structured output constrained to the analyte registry). Without a key —
+// or if the AI call fails — uploads fall back to the seed fixtures (matched
+// by filename tokens) so the demo keeps working.
 const FIXTURE_PATTERNS: [RegExp, string][] = [
   [/26M51914|170903|sond/i, "R1"],
   [/0842|170504|ANAL/i, "R2"],
@@ -23,15 +24,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "file mancante" }, { status: 400 });
   }
 
-  const fixtureId =
-    FIXTURE_PATTERNS.find(([re]) => re.test(file.name))?.[1] ?? "R1";
-  const fixture = getSeed().reports.find((r) => r.id === fixtureId)!;
-
+  const buffer = Buffer.from(await file.arrayBuffer());
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
   const docId = newId("doc");
   const safeName = file.name.replace(/[^\w.\-]+/g, "_");
   const stored = `${docId}_${safeName}`;
-  fs.writeFileSync(path.join(UPLOAD_DIR, stored), Buffer.from(await file.arrayBuffer()));
+  fs.writeFileSync(path.join(UPLOAD_DIR, stored), buffer);
+
+  let extraction: Pick<AnalysisRecord, "header" | "parameters"> | null = null;
+  let source: "claude" | "fixture" = "fixture";
+  let aiError: string | null = null;
+
+  if (aiEnabled() && file.name.toLowerCase().endsWith(".pdf")) {
+    try {
+      extraction = await extractFromPdf(buffer, file.name);
+      source = "claude";
+    } catch (e) {
+      aiError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  if (!extraction) {
+    const fixtureId = FIXTURE_PATTERNS.find(([re]) => re.test(file.name))?.[1] ?? "R1";
+    const fixture = getSeed().reports.find((r) => r.id === fixtureId)!;
+    extraction = {
+      header: structuredClone(fixture.extraction.header),
+      parameters: structuredClone(fixture.extraction.parameters),
+    };
+  }
 
   const doc: DocumentRecord = {
     id: docId,
@@ -39,17 +59,18 @@ export async function POST(req: NextRequest) {
     uploaded_at: new Date().toISOString(),
     size: file.size,
     source: "upload",
-    fixture_id: fixtureId,
+    fixture_id: source === "claude" ? null : "R1",
     pdf_url: `/api/files/${encodeURIComponent(stored)}`,
-    pages: fixtureId === "R2" ? 2 : 1,
+    pages: 1,
   };
   const analysis: AnalysisRecord = {
     id: newId("ana"),
     document_id: docId,
-    header: structuredClone(fixture.extraction.header),
-    parameters: structuredClone(fixture.extraction.parameters),
+    header: extraction.header,
+    parameters: extraction.parameters,
     edited: false,
+    extraction_source: source,
   };
   store.addDocument(doc, analysis);
-  return NextResponse.json({ document: doc, analysis, simulated: true, fixture_id: fixtureId });
+  return NextResponse.json({ document: doc, analysis, extraction_source: source, ai_error: aiError });
 }

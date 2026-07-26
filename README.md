@@ -28,8 +28,15 @@ based on the analytical results compared against the applicable regulatory limit
 - Secondary sections: I miei documenti, Analisi e confronti, Impianti e linee,
   Normativa e procedure, Storico richieste.
 
-Extraction is **simulated** in this build (uploads map to seed fixtures by filename;
-unknown files fall back to R1) — the Claude API extraction call lands in Phase 1.1.
+**Claude integration (Phase 1.1):** with `ANTHROPIC_API_KEY` set (locally in
+`.env.local`, on Render via the dashboard — see `render.yaml`), uploaded PDFs are
+read by Claude (`claude-opus-5`, structured output constrained to the analyte
+registry) and the chat is Claude with a `run_comparison` tool — every conformity
+number still comes from the deterministic rules engine, and server-side refusal
+fallbacks are enabled by default. Without a key, extraction maps uploads to seed
+fixtures by filename and the chat uses a deterministic intent parser, so the demo
+works fully offline. The Dati Estratti panel shows an **AI**/**DEMO** badge for
+the active source.
 Persistence and file storage live in `DATA_DIR` (default `.data/`; on Render, the
 persistent disk mounted at `/var/data` — see `render.yaml`). Database records move
 to Render Postgres in Phase 2; uploaded documents stay on the disk.

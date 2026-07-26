@@ -19,7 +19,7 @@ export default function StoricoPage() {
       .filter((a) => a.edited)
       .map((a) => ({
         time: new Date().toISOString(),
-        who: "Federico Parolini",
+        who: "Aurora Parolini",
         what: "Correzione manuale dei dati estratti",
         detail: documents.find((d) => d.id === a.document_id)?.filename ?? "—",
         tone: "warn" as const,
