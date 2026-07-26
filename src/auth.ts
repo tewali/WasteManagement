@@ -25,7 +25,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null;
         const user = users.byEmail(email);
         if (!user || !verifyPassword(password, user.password_hash)) return null;
-        return { id: user.id, name: user.name, email: user.email, role: user.role, title: user.title };
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          title: user.title,
+          company: user.company,
+        };
       },
     }),
   ],
@@ -34,6 +41,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.role = (user as { role?: string }).role;
         token.title = (user as { title?: string }).title;
+        token.company = (user as { company?: string }).company;
       }
       return token;
     },
@@ -42,6 +50,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.sub ?? "";
         session.user.role = (token.role as string) ?? "operator";
         session.user.title = (token.title as string) ?? "";
+        session.user.company = token.company as string | undefined;
       }
       return session;
     },

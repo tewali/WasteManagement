@@ -138,6 +138,63 @@ export interface OmologaRecord {
   notes?: string;
 }
 
+// ---- movimenti / FIR digitale (Phase 3) --------------------------------
+
+export interface Transporter {
+  name: string;
+  /** Iscrizione Albo Gestori Ambientali (es. MI12345). */
+  albo_number: string;
+  plate: string;
+}
+
+/**
+ * A single conferimento (incoming waste movement) with its FIR. RENTRI
+ * transmission is SIMULATED in this build: the payload mirrors the FIR
+ * digitale structure (DM 59/2023) but nothing leaves the app.
+ */
+export interface MovementRecord {
+  id: string;
+  fir_number: string;
+  /** ISO date of transport/arrival at the plant. */
+  date: string;
+  producer_id: string | null;
+  producer_name: string;
+  transporter: Transporter;
+  eer: string;
+  description: string;
+  line_id: string;
+  omologa_id: string | null;
+  quantity_declared_kg: number;
+  /** Net weight from the weighbridge (gross − tare); null until weighed. */
+  quantity_weighed_kg: number | null;
+  /** True when |weighed − declared| exceeds 5% of the declared quantity. */
+  weigh_discrepancy?: boolean;
+  status: "in_arrivo" | "accettato" | "respinto";
+  rejection_reason?: string;
+  rentri: { transmitted_at: string; transaction_id: string } | null;
+  created_at: string;
+  created_by: string;
+}
+
+// ---- portale clienti (Phase 3) -----------------------------------------
+
+/** A lab report submitted by a producer through the customer portal. */
+export interface PortalSubmission {
+  id: string;
+  producer_email: string;
+  producer_name: string;
+  document_id: string;
+  analysis_id: string;
+  message?: string;
+  status: "inviato" | "completato";
+  esito?: "conforme" | "non_conforme";
+  verification_id: string | null;
+  conversation_id: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
 // ---- persisted records -------------------------------------------------
 
 export interface DocumentRecord {

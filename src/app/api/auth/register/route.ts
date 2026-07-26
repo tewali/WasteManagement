@@ -7,6 +7,8 @@ export async function POST(req: NextRequest) {
     email?: string;
     password?: string;
     title?: string;
+    account_type?: "staff" | "producer";
+    company?: string;
   };
   const name = body.name?.trim() ?? "";
   const email = body.email?.trim() ?? "";
@@ -30,6 +32,23 @@ export async function POST(req: NextRequest) {
       { status: 409 },
     );
   }
-  const user = users.create({ name, email, password, title: body.title });
-  return NextResponse.json({ ok: true, user: { id: user.id, name: user.name, email: user.email } });
+  const producer = body.account_type === "producer";
+  if (producer && !body.company?.trim()) {
+    return NextResponse.json(
+      { error: "Indicare la ragione sociale dell'azienda produttrice." },
+      { status: 400 },
+    );
+  }
+  const user = users.create({
+    name,
+    email,
+    password,
+    title: body.title,
+    role: producer ? "producer" : undefined,
+    company: body.company,
+  });
+  return NextResponse.json({
+    ok: true,
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+  });
 }

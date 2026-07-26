@@ -11,8 +11,10 @@ import type {
   AnalysisRecord,
   Conversation,
   DocumentRecord,
+  MovementRecord,
   OmologaRecord,
   PlantLine,
+  PortalSubmission,
   VerificationRecord,
 } from "./types";
 
@@ -24,6 +26,9 @@ interface Db {
   /** Configurable plant lines (Phase 2); null = not customized yet, use seed. */
   plant_lines: PlantLine[] | null;
   omologhe: OmologaRecord[];
+  /** Movimenti/FIR (Phase 3); null = not initialized yet, copy from seed. */
+  movements: MovementRecord[] | null;
+  portal_submissions: PortalSubmission[];
 }
 
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), ".data");
@@ -46,6 +51,8 @@ function load(): Db {
     conversations: [],
     plant_lines: null,
     omologhe: [],
+    movements: null,
+    portal_submissions: [],
     ...(db ?? {}),
   };
   return db;
@@ -146,5 +153,58 @@ export const store = {
   },
   document(id: string) {
     return load().documents.find((x) => x.id === id) ?? null;
+  },
+
+  // ---- movimenti / FIR (Phase 3: mutable, initialized from seed) ----------
+  movements(): MovementRecord[] {
+    const d = load();
+    if (d.movements === null) {
+      d.movements = structuredClone(getSeed().movements);
+      save();
+    }
+    return d.movements;
+  },
+  movement(id: string): MovementRecord | null {
+    return this.movements().find((m) => m.id === id) ?? null;
+  },
+  addMovement(m: MovementRecord) {
+    const list = this.movements();
+    list.unshift(m);
+    save();
+  },
+  updateMovement(id: string, patch: Partial<MovementRecord>): MovementRecord | null {
+    const m = this.movements().find((x) => x.id === id);
+    if (!m) return null;
+    Object.assign(m, patch);
+    save();
+    return m;
+  },
+  deleteMovement(id: string): boolean {
+    const list = this.movements();
+    const i = list.findIndex((m) => m.id === id);
+    if (i < 0) return false;
+    list.splice(i, 1);
+    save();
+    return true;
+  },
+
+  // ---- portale clienti (Phase 3) ------------------------------------------
+  submissions(): PortalSubmission[] {
+    return load().portal_submissions;
+  },
+  submission(id: string): PortalSubmission | null {
+    return load().portal_submissions.find((s) => s.id === id) ?? null;
+  },
+  addSubmission(s: PortalSubmission) {
+    const d = load();
+    d.portal_submissions.unshift(s);
+    save();
+  },
+  updateSubmission(id: string, patch: Partial<PortalSubmission>): PortalSubmission | null {
+    const s = load().portal_submissions.find((x) => x.id === id);
+    if (!s) return null;
+    Object.assign(s, patch);
+    save();
+    return s;
   },
 };

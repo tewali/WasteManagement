@@ -38,6 +38,30 @@ export async function GET() {
       detail: d.filename,
       href: chatFor(d.id),
     })),
+    // Portal submissions awaiting review — Phase 3.
+    ...store
+      .submissions()
+      .filter((s) => s.status === "inviato")
+      .map((s) => ({
+        id: `sub_${s.id}`,
+        time: s.created_at,
+        tone: "info",
+        title: "Nuovo rapporto dal portale clienti",
+        detail: `${s.producer_name} · ${documents.find((d) => d.id === s.document_id)?.filename ?? "—"}`,
+        href: "/portale-clienti",
+      })),
+    // Weighbridge discrepancies on accepted movements — Phase 3.
+    ...store
+      .movements()
+      .filter((m) => m.weigh_discrepancy)
+      .map((m) => ({
+        id: `movw_${m.id}`,
+        time: m.created_at,
+        tone: "ko",
+        title: "Scostamento pesa oltre il 5%",
+        detail: `${m.fir_number} · ${m.producer_name} · dichiarati ${m.quantity_declared_kg.toLocaleString("it-IT")} kg, pesati ${m.quantity_weighed_kg?.toLocaleString("it-IT")} kg`,
+        href: "/movimenti",
+      })),
     // Omologhe expiring within 30 days (or expired) — Phase 2.
     ...store
       .omologhe()
