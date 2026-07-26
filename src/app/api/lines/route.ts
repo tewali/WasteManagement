@@ -18,8 +18,22 @@ function sanitize(body: Partial<PlantLine>, id: string): PlantLine | string {
     .map((c) => c.trim().replace(/\s+/g, " "))
     .filter((c) => /^\d{2} \d{2} \d{2}\*?$/.test(c));
   if (eer.length === 0) return "Indicare almeno un codice EER valido (formato 'NN NN NN' o 'NN NN NN*').";
-  const validTables = new Set(getSeed().tables.map((t) => t.id));
-  const bindings = (body.limit_bindings ?? []).filter((b) => validTables.has(b.limit_table_id));
+  const tables = getSeed().tables;
+  const validTables = new Set(tables.map((t) => t.id));
+  const blockingTables = new Set(tables.filter((t) => t.blocking).map((t) => t.id));
+  const raw = (body.limit_bindings ?? []).filter((b) => validTables.has(b.limit_table_id));
+  // The standard comparison (standardTableId) resolves the line's `primary`
+  // binding: keep the one the client sent, or promote the first non-blocking
+  // binding. A blocking layer (POP) can never be the standard table.
+  const primaryId =
+    raw.find((b) => !blockingTables.has(b.limit_table_id) && b.primary)?.limit_table_id ??
+    raw.find((b) => !blockingTables.has(b.limit_table_id))?.limit_table_id;
+  const bindings = raw.map((b) => ({
+    limit_table_id: b.limit_table_id,
+    purpose: b.purpose,
+    ...(blockingTables.has(b.limit_table_id) ? { blocking: true } : {}),
+    ...(b.limit_table_id === primaryId ? { primary: true } : {}),
+  }));
   return {
     id,
     name,

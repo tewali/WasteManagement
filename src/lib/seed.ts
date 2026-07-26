@@ -60,6 +60,38 @@ export function analyteLabel(key: string): string {
   return getSeed().analyteByKey.get(key)?.label ?? key;
 }
 
+/**
+ * The line every verification refers to unless the user picks another one.
+ * Pass the plant's configured lines (store.lines()) when available; without an
+ * argument the static seed lines are used.
+ */
+export function defaultLineId(lines: PlantLine[] = getSeed().lines): string {
+  return (lines[0] ?? getSeed().lines[0]).id;
+}
+
+/**
+ * The standard limit table of a line: the binding flagged `primary`, i.e. the
+ * table an acceptance check compares against by default. Blocking bindings
+ * (POP) are an extra layer and are never the standard comparison.
+ * Pass the plant's configured lines (store.lines()) when available.
+ */
+export function standardTableId(
+  lineId?: string | null,
+  lines: PlantLine[] = getSeed().lines,
+): string {
+  const seed = getSeed();
+  const line =
+    (lineId ? lines.find((l) => l.id === lineId) : null) ?? lines[0] ?? seed.lines[0];
+  const bindings = line.limit_bindings.filter((b) => !b.blocking);
+  const primary = bindings.find((b) => b.primary) ?? bindings[0];
+  return primary?.limit_table_id ?? seed.tables[0].id;
+}
+
+/** True for tables bound to the line as a blocking layer (e.g. the POP check). */
+export function isBlockingTable(tableId: string): boolean {
+  return Boolean(getTable(tableId)?.blocking);
+}
+
 export function seedPdfPath(rel: string): string {
   return path.join(SEED_DIR, "reports", rel);
 }

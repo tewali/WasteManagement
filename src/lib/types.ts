@@ -84,7 +84,12 @@ export interface PlantLine {
   description: string;
   admissible_eer: string[];
   annual_capacity_t: number;
-  limit_bindings: { limit_table_id: string; purpose: string; blocking?: boolean }[];
+  /**
+   * Limit tables bound to the line. Exactly one binding is the `primary` one:
+   * the standard limits every acceptance check runs against by default.
+   * `blocking` bindings (POP) are an additional layer, never a substitute.
+   */
+  limit_bindings: { limit_table_id: string; purpose: string; blocking?: boolean; primary?: boolean }[];
 }
 
 export interface ParamVerdict {

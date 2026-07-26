@@ -7,7 +7,7 @@
 
 import { suggestLines } from "./line-suggest";
 import { runVerification } from "./rules-engine";
-import { analyteLabel, getSeed, getTable } from "./seed";
+import { analyteLabel, defaultLineId, getSeed, getTable, standardTableId } from "./seed";
 import { store } from "./store";
 import type {
   AnalysisRecord,
@@ -107,6 +107,7 @@ function conclusione(v: VerificationResult, lineId: string | null): MessageBlock
 export interface AnnaReply {
   blocks: MessageBlock[];
   verification: VerificationResult | null;
+  verifications: VerificationResult[];
   table_id: string | null;
   line_id: string | null;
 }
@@ -120,8 +121,11 @@ export function annaRespond(opts: {
 }): AnnaReply {
   const { message, analysis, document } = opts;
   const seed = getSeed();
-  const tableId = detectTableId(message) ?? opts.defaultTableId ?? null;
-  const lineId = detectLineId(message) ?? opts.defaultLineId ?? "L1-soil-washing";
+  const plantLines = store.lines();
+  const lineId = detectLineId(message) ?? opts.defaultLineId ?? defaultLineId(plantLines);
+  // No table named in the message and none active: the line's standard limits.
+  const tableId =
+    detectTableId(message) ?? opts.defaultTableId ?? standardTableId(lineId, plantLines);
 
   if (!analysis || !document) {
     return {
@@ -136,6 +140,7 @@ export function annaRespond(opts: {
         },
       ],
       verification: null,
+      verifications: [],
       table_id: tableId,
       line_id: lineId,
     };
@@ -166,13 +171,14 @@ export function annaRespond(opts: {
     return {
       blocks: [{ type: "text", text }],
       verification: null,
+      verifications: [],
       table_id: tableId,
       line_id: lineId,
     };
   }
 
   if (wantsVerification(message) || detectTableId(message)) {
-    const table = getTable(tableId ?? "tab5-121-2020-colA")!;
+    const table = getTable(tableId) ?? getTable(standardTableId(lineId, plantLines))!;
     const verification = runVerification(analysis.parameters, table, analyteLabel, lineId ?? undefined);
     const colDesc = table.id.endsWith("colA")
       ? " (colonna A - siti ad uso verde pubblico, privato e residenziale)"
@@ -188,11 +194,11 @@ export function annaRespond(opts: {
       { type: "esito", verification, document_name: document.filename },
       conclusione(verification, lineId),
     ];
-    return { blocks, verification, table_id: table.id, line_id: lineId };
+    return { blocks, verification, verifications: [verification], table_id: table.id, line_id: lineId };
   }
 
   // Generic assistant answer with pointers.
-  const line = store.line(lineId ?? "L1-soil-washing");
+  const line = store.line(lineId);
   return {
     blocks: [
       {
@@ -205,6 +211,7 @@ export function annaRespond(opts: {
       },
     ],
     verification: null,
+    verifications: [],
     table_id: tableId,
     line_id: lineId,
   };

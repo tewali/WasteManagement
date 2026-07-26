@@ -22,7 +22,7 @@
       "admissible_eer": ["17 05 03*", "17 05 04", "17 09 03*", "17 09 04", "20 02 02"],
       "annual_capacity_t": 60000,
       "limit_bindings": [
-        { "limit_table_id": "tab5-121-2020-colA", "purpose": "EoW — destinazione verde pubblico/privato e residenziale (target primario)" },
+        { "limit_table_id": "tab5-121-2020-colA", "purpose": "EoW — destinazione verde pubblico/privato e residenziale (target primario)", "primary": true },
         { "limit_table_id": "tab5-121-2020-colB", "purpose": "EoW — destinazione commerciale e industriale" },
         { "limit_table_id": "eluato-discarica-inerti", "purpose": "Routing di destino — ammissibilità discarica inerti per i flussi non recuperabili" },
         { "limit_table_id": "eluato-discarica-non-pericolosi", "purpose": "Routing di destino — ammissibilità discarica non pericolosi" },

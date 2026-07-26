@@ -96,6 +96,9 @@ Notes:
   the `disk` block and the `DATA_DIR` env var from `render.yaml` (data then
   resets on every deploy).
 - **Auto-deploy** is enabled: every push to the connected branch redeploys.
-- **Phase 1.1:** when real Claude extraction lands, uncomment the
-  `ANTHROPIC_API_KEY` entry in `render.yaml` and set the key in the Render
-  dashboard (it is marked `sync: false`, so the value never lives in the repo).
+- **Claude extraction:** `render.yaml` declares `ANTHROPIC_API_KEY` with
+  `sync: false`, so the value never lives in the repo — set it in the Render
+  dashboard (*Environment* → *Add Environment Variable*) and redeploy.
+  Until it is set the app runs fine but uploads fall back to demo fixtures,
+  and the chat says so ("L'estrazione automatica non è configurata su questo
+  ambiente"). Locally the same key goes in `.env.local`.

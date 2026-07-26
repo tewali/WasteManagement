@@ -17,7 +17,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { suggestLines } from "./line-suggest";
 import { runVerification } from "./rules-engine";
-import { analyteLabel, getSeed } from "./seed";
+import { analyteLabel, defaultLineId, getSeed, isBlockingTable, standardTableId } from "./seed";
 import { store } from "./store";
 import type {
   AnalysisRecord,
@@ -193,10 +193,15 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
   const lines = plantLines
     .map((l) => `- id "${l.id}": ${l.name} (${l.operation}) — EER ammessi: ${l.admissible_eer.join(", ")}`)
     .join("\n");
+  const defaultLine =
+    plantLines.find((l) => l.id === defaultLineId(plantLines)) ?? plantLines[0];
+  const standardTable = seed.tables.find(
+    (t) => t.id === standardTableId(defaultLine?.id, plantLines),
+  )!;
   const singleLineNote =
     plantLines.length === 1
       ? `\nL'impianto ha un'UNICA linea operativa (${plantLines[0].name}, id "${plantLines[0].id}"): assumi sempre questa linea per ogni verifica di accettazione, senza chiederla all'utente.`
-      : "";
+      : `\nLinea predefinita: ${defaultLine.name} (id "${defaultLine.id}") — usala quando l'utente non ne indica un'altra.`;
 
   let docContext = "Nessun documento attivo nella conversazione.";
   if (analysis && document) {
@@ -218,6 +223,13 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
     `deterministico dell'applicazione calcola ogni esito e i risultati ti vengono restituiti. Basa le conclusioni ` +
     `esclusivamente su quei risultati. L'interfaccia mostra all'utente una tabella dettagliata dell'esito: nel testo ` +
     `commenta i punti salienti (parametri non conformi, non determinati, vincoli bloccanti) senza ripetere tutta la tabella.\n\n` +
+    `ESITO PREDEFINITO: quando l'utente chiede genericamente di analizzare un rapporto, di verificarne la conformità ` +
+    `o l'accettabilità, il confronto da eseguire è SEMPRE quello con i limiti standard della linea ` +
+    `(table_id "standard" = ${standardTable.name.split("(")[0].trim()}, linea ${defaultLine.name}). ` +
+    `Usa un'altra tabella solo se l'utente la richiede esplicitamente.\n` +
+    `Il vincolo POP (tabella "pop-reg-2019-1021") è un controllo BLOCCANTE AGGIUNTIVO: puoi eseguirlo in più ` +
+    `rispetto al confronto standard, ma non sostituisce mai il confronto con i limiti standard della linea — ` +
+    `da solo produrrebbe quasi solo esiti "non applicabile" e non risponde alla domanda di accettazione.\n\n` +
     `Le tabelle limiti sono in stato SIMULATO/da validare: se esegui una verifica, ricordalo brevemente.\n\n` +
     `Tabelle limiti disponibili:\n${tables}\n\nLinee dell'impianto:\n${lines}${singleLineNote}\n\n${docContext}`
   );
@@ -225,7 +237,10 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
 
 export interface AiChatResult {
   blocks: MessageBlock[];
+  /** Headline esito: the comparison against the line's standard limits. */
   verification: VerificationResult | null;
+  /** Every comparison run this turn (standard first, blocking layers after). */
+  verifications: VerificationResult[];
   table_id: string | null;
   line_id: string | null;
 }
@@ -238,7 +253,8 @@ export async function annaChat(opts: {
 }): Promise<AiChatResult> {
   const seed = getSeed();
   const tableIds = seed.tables.map((t) => t.id);
-  const lineIds = store.lines().map((l) => l.id);
+  const plantLines = store.lines();
+  const lineIds = plantLines.map((l) => l.id);
 
   const tools: Anthropic.Beta.BetaToolUnion[] = [
     {
@@ -253,8 +269,19 @@ export async function annaChat(opts: {
         additionalProperties: false,
         required: ["table_id", "line_id"],
         properties: {
-          table_id: { type: "string", enum: tableIds },
-          line_id: { type: "string", enum: lineIds },
+          table_id: {
+            type: "string",
+            enum: ["standard", ...tableIds],
+            description:
+              'Usare "standard" (impostazione predefinita) per i limiti standard della linea: è la scelta ' +
+              "corretta per ogni richiesta generica di analisi, conformità o accettabilità. Indicare un id " +
+              "specifico solo se l'utente chiede espressamente quella tabella.",
+          },
+          line_id: {
+            type: "string",
+            enum: lineIds,
+            description: `Linea di destinazione; se l'utente non la indica usare "${defaultLineId(plantLines)}".`,
+          },
         },
       },
     },
@@ -279,8 +306,10 @@ export async function annaChat(opts: {
     { role: "user" as const, content: opts.message },
   ];
 
-  let verification: VerificationResult | null = null;
-  let tableId: string | null = null;
+  // Every comparison run this turn, in call order. The headline esito is the
+  // one against the line's standard limits: a blocking layer (POP) can be run
+  // in addition, but must never replace it in the card or in the doc panel.
+  const verifications: VerificationResult[] = [];
   let lineId: string | null = null;
 
   for (let i = 0; i < 4; i++) {
@@ -330,11 +359,22 @@ export async function annaChat(opts: {
           continue;
         }
         const input = block.input as { table_id: string; line_id: string };
-        const table = seed.tables.find((t) => t.id === input.table_id);
+        // Resolve the defaults the model is allowed to leave implicit: the
+        // line's standard limits, on the default line.
+        const line =
+          plantLines.find((l) => l.id === input.line_id)?.id ?? defaultLineId(plantLines);
+        const requestedTableId =
+          input.table_id === "standard" ? standardTableId(line, plantLines) : input.table_id;
+        const table = seed.tables.find((t) => t.id === requestedTableId);
         if (table && opts.analysis) {
-          verification = runVerification(opts.analysis.parameters, table, analyteLabel, input.line_id);
-          tableId = input.table_id;
-          lineId = input.line_id;
+          const verification = runVerification(
+            opts.analysis.parameters,
+            table,
+            analyteLabel,
+            line,
+          );
+          verifications.push(verification);
+          lineId = line;
           results.push({
             type: "tool_result",
             tool_use_id: block.id,
@@ -375,17 +415,44 @@ export async function annaChat(opts: {
       .map((b) => b.text)
       .join("\n")
       .trim();
-    const blocks: MessageBlock[] = [];
-    if (verification) {
-      blocks.push({
-        type: "esito",
-        verification,
-        document_name: opts.document?.filename ?? "",
-      });
+
+    // A blocking layer (POP) alone never answers "can we accept this waste?":
+    // if the model only ran blocking tables, add the line's standard comparison.
+    if (
+      opts.analysis &&
+      verifications.length > 0 &&
+      verifications.every((v) => isBlockingTable(v.limit_table_id))
+    ) {
+      const line = lineId ?? defaultLineId(plantLines);
+      const standard = seed.tables.find((t) => t.id === standardTableId(line, plantLines));
+      if (standard) {
+        verifications.unshift(
+          runVerification(opts.analysis.parameters, standard, analyteLabel, line),
+        );
+      }
     }
+
+    // Standard limits first, blocking layers after — in the card and in the panel.
+    const ordered = [
+      ...verifications.filter((v) => !isBlockingTable(v.limit_table_id)),
+      ...verifications.filter((v) => isBlockingTable(v.limit_table_id)),
+    ];
+    const headline = ordered[0] ?? null;
+
+    const blocks: MessageBlock[] = ordered.map((v) => ({
+      type: "esito" as const,
+      verification: v,
+      document_name: opts.document?.filename ?? "",
+    }));
     if (text) blocks.push({ type: "text", text });
     if (blocks.length === 0) blocks.push({ type: "text", text: "Non ho prodotto una risposta, riprovi." });
-    return { blocks, verification, table_id: tableId, line_id: lineId };
+    return {
+      blocks,
+      verification: headline,
+      verifications: ordered,
+      table_id: headline?.limit_table_id ?? null,
+      line_id: lineId,
+    };
   }
 
   throw new Error("troppi cicli di tool use senza risposta finale");
