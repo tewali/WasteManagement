@@ -48,16 +48,20 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  if (reply.verification && document && analysis) {
-    const record: VerificationRecord = {
-      ...reply.verification,
-      id: newId("ver"),
-      analysis_id: analysis.id,
-      document_id: document.id,
-      created_at: new Date().toISOString(),
-      requested_by: session.user.name ?? "Operatore",
-    };
-    store.addVerification(record);
+  // Every comparison run this turn goes to the audit trail — a supplementary
+  // POP check is recorded alongside the standard one, not instead of it.
+  if (document && analysis) {
+    for (const verification of reply.verifications) {
+      const record: VerificationRecord = {
+        ...verification,
+        id: newId("ver"),
+        analysis_id: analysis.id,
+        document_id: document.id,
+        created_at: new Date().toISOString(),
+        requested_by: session.user.name ?? "Operatore",
+      };
+      store.addVerification(record);
+    }
   }
 
   return NextResponse.json({ ...reply, engine });

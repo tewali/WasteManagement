@@ -42,10 +42,15 @@ const mid = () => `m${Date.now()}_${seq++}`;
 export default function ChatApp({
   tables,
   lines,
+  defaultTableId,
+  defaultLineId,
   initialConversationId,
 }: {
   tables: TableOpt[];
   lines: LineOpt[];
+  /** Standard limit table of the default line — the esito shown unless the user switches. */
+  defaultTableId: string;
+  defaultLineId: string;
   initialConversationId?: string | null;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -55,8 +60,8 @@ export default function ChatApp({
   const [analysis, setAnalysis] = useState<AnalysisRecord | null>(null);
   const [attachments, setAttachments] = useState<DocumentRecord[]>([]);
   const [verification, setVerification] = useState<VerificationResult | null>(null);
-  const [tableId, setTableId] = useState("tab5-121-2020-colA");
-  const [lineId, setLineId] = useState("L1-soil-washing");
+  const [tableId, setTableId] = useState(defaultTableId);
+  const [lineId, setLineId] = useState(defaultLineId);
   const [panelOpen, setPanelOpen] = useState(true);
   const [dragOver, setDragOver] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -257,7 +262,7 @@ export default function ChatApp({
         });
       }
       await askAnna(
-        `Analizza il rapporto e verifica la conformità per la linea selezionata`,
+        `Analizza il rapporto e verifica la conformità rispetto ai limiti standard della linea selezionata`,
         data.document,
         { silentUser: true },
       );
@@ -296,8 +301,8 @@ export default function ChatApp({
     setAttachments([]);
     setVerification(null);
     setInput("");
-    setTableId("tab5-121-2020-colA");
-    setLineId("L1-soil-washing");
+    setTableId(defaultTableId);
+    setLineId(defaultLineId);
   }
 
   function submit(text?: string) {

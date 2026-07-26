@@ -55,7 +55,8 @@ export function EsitoBlock({ verification }: { verification: VerificationResult 
         {verification.counts.non_applicabile > 0 && (
           <StatChip label="Non applicabili" value={verification.counts.non_applicabile} cls="bg-sky-100 text-sky-700" />
         )}
-        <StatChip label="Totale parametri" value={verification.evaluated_total} cls="bg-sky-100 text-sky-800" />
+        {/* evaluated_total excludes "non applicabile" — label it for what it counts. */}
+        <StatChip label="Parametri valutati" value={verification.evaluated_total} cls="bg-sky-100 text-sky-800" />
       </div>
       <div className="overflow-hidden rounded-lg border border-slate-200">
         <table className="w-full text-[12.5px]">
