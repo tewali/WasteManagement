@@ -188,11 +188,37 @@ export default function ChatApp({
   async function handleFiles(files: FileList | File[]) {
     const file = Array.from(files)[0];
     if (!file) return;
+    // PDF only: reject anything else before uploading.
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
+      pushMessage({
+        id: mid(),
+        role: "assistant",
+        time: now(),
+        blocks: [
+          {
+            type: "text",
+            text: `⚠️ Il file **"${file.name}"** non è un PDF. Sono accettati solo rapporti di prova in formato **PDF**.`,
+          },
+        ],
+      });
+      return;
+    }
     setBusy(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => null)) as { error?: string } | null;
+        pushMessage({
+          id: mid(),
+          role: "assistant",
+          time: now(),
+          blocks: [{ type: "text", text: `⚠️ Caricamento rifiutato: ${err?.error ?? "errore sconosciuto"}` }],
+        });
+        return;
+      }
       const data = (await res.json()) as {
         document: DocumentRecord;
         analysis: AnalysisRecord;
@@ -341,7 +367,7 @@ export default function ChatApp({
                 <div className="mt-1 text-[15px] font-bold text-brand-dark">
                   Rilascia qui il rapporto di prova
                 </div>
-                <div className="text-[12.5px] text-slate-500">PDF, Excel o immagine</div>
+                <div className="text-[12.5px] text-slate-500">Solo file PDF</div>
               </div>
             </div>
           )}
@@ -359,7 +385,9 @@ export default function ChatApp({
           )}
           <div ref={scroller} data-chat-scroll className="flex-1 overflow-y-auto px-8 py-6">
             <div className="mx-auto max-w-[760px] space-y-5">
-              {messages.length === 0 && <EmptyState onDemo={loadDemo} onSuggestion={(s) => submit(s)} />}
+              {messages.length === 0 && (
+                <EmptyState onDemo={loadDemo} onUpload={() => fileInput.current?.click()} />
+              )}
               {messages.map((m) =>
                 m.role === "user" ? (
                   <UserBubble key={m.id} m={m} />
@@ -400,7 +428,7 @@ export default function ChatApp({
                 <QuickAction
                   icon={<IconDoc size={17} className="text-brand-dark" />}
                   title="Carica documento"
-                  subtitle="(PDF, Excel, Immagine)"
+                  subtitle="(solo PDF)"
                   onClick={() => fileInput.current?.click()}
                 />
                 <QuickAction
@@ -422,7 +450,7 @@ export default function ChatApp({
                 ref={fileInput}
                 type="file"
                 hidden
-                accept=".pdf,.xls,.xlsx,.png,.jpg,.jpeg,.doc,.docx"
+                accept=".pdf,application/pdf"
                 onChange={(e) => {
                   if (e.target.files?.length) void handleFiles(e.target.files);
                   e.target.value = "";
@@ -508,12 +536,12 @@ function TypingBubble() {
 }
 
 function AnnaAvatar() {
-  const hasImage = useImageAvailable("/anna.jpg");
+  const hasImage = useImageAvailable("/anna.png");
   if (hasImage) {
     return (
       <span className="mt-1 block h-8 w-8 shrink-0 overflow-hidden rounded-full ring-1 ring-brand/40">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/anna.jpg" alt="Anna" className="h-full w-full object-cover object-top" />
+        <img src="/anna.png" alt="Anna" className="h-full w-full object-cover object-top" />
       </span>
     );
   }
@@ -564,41 +592,35 @@ function QuickAction({
   );
 }
 
-function EmptyState({
-  onDemo,
-  onSuggestion,
-}: {
-  onDemo: () => void;
-  onSuggestion: (s: string) => void;
-}) {
+function EmptyState({ onDemo, onUpload }: { onDemo: () => void; onUpload: () => void }) {
   return (
-    <div className="fade-up mx-auto max-w-[560px] pt-10 text-center">
-      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-pale text-2xl">
-        💬
-      </div>
+    <div className="fade-up mx-auto max-w-[620px] pt-8 text-center">
       <h2 className="text-[19px] font-bold text-slate-800">Buongiorno, sono Anna.</h2>
-      <p className="mt-2 text-[13.5px] leading-relaxed text-slate-500">
-        Carichi un rapporto di prova (o lo trascini qui) e verifico la conformità ai limiti
-        normativi per le linee dell&apos;impianto: Tabella 5, criteri di ammissibilità in discarica,
-        vincolo POP.
+      <p className="mt-1.5 text-[13.5px] leading-relaxed text-slate-500">
+        Carichi un rapporto di prova: estraggo i dati e verifico la conformità ai limiti
+        normativi per le linee dell&apos;impianto.
       </p>
-      <div className="mt-5 flex flex-wrap justify-center gap-2">
-        <button
-          onClick={onDemo}
-          className="rounded-full bg-brand-dark px-4 py-2 text-[12.5px] font-semibold text-white shadow-sm hover:bg-brand"
-        >
-          ▶ Prova con il campione demo (17 09 03*)
-        </button>
-        {["Quali codici EER sono ammessi sulla linea di inertizzazione?"].map((s) => (
-          <button
-            key={s}
-            onClick={() => onSuggestion(s)}
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[12.5px] font-medium text-slate-600 hover:border-brand/50 hover:text-brand-dark"
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      <button
+        onClick={onUpload}
+        className="group mt-6 flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white/70 px-8 py-14 transition hover:border-brand hover:bg-brand-mist/60"
+        title="Seleziona un rapporto di prova"
+      >
+        <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-pale text-2xl transition group-hover:scale-105">
+          📄
+        </span>
+        <span className="text-[15px] font-bold text-slate-700 group-hover:text-brand-dark">
+          Trascina qui il rapporto di prova
+        </span>
+        <span className="text-[12.5px] text-slate-400">
+          oppure fai clic per selezionare il file · solo PDF
+        </span>
+      </button>
+      <button
+        onClick={onDemo}
+        className="mt-4 text-[12.5px] font-semibold text-brand-dark hover:underline"
+      >
+        oppure prova con il campione demo (17 09 03*)
+      </button>
     </div>
   );
 }

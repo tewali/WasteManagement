@@ -44,7 +44,7 @@ export default function Sidebar() {
       {/* Logo */}
       <BrandLogo />
 
-      {/* Anna hero: real photo if public/anna.jpg exists, SVG placeholder otherwise.
+      {/* Anna hero: real photo if public/anna.png exists, SVG placeholder otherwise.
           Height scales with the viewport so the nav keeps ~50% on desktop. */}
       <div className="relative mx-0 h-[22vh] max-h-[300px] min-h-[130px] shrink-0 overflow-hidden">
         <AnnaHero />
@@ -180,13 +180,13 @@ function BrandLogo() {
   );
 }
 
-/** Anna hero: uses public/anna.jpg when present, falls back to the stylized SVG. */
+/** Anna hero: uses public/anna.png when present, falls back to the stylized SVG. */
 function AnnaHero() {
-  const hasImage = useImageAvailable("/anna.jpg");
+  const hasImage = useImageAvailable("/anna.png");
   if (hasImage) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src="/anna.jpg" alt="Anna — AI Assistant" className="h-full w-full object-cover object-top" />
+      <img src="/anna.png" alt="Anna — AI Assistant" className="h-full w-full object-cover object-top" />
     );
   }
   return <AnnaPortrait />;

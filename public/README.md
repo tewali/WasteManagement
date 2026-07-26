@@ -6,7 +6,7 @@ file is missing:
 
 | File | Used for |
 |---|---|
-| `anna.jpg` | Sidebar hero portrait + chat avatar of Anna |
+| `anna.png` | Sidebar hero portrait + chat avatar of Anna |
 | `valli-logo.png` | Company logo in the sidebar (rendered on a white chip) |
 
 Upload via GitHub: **Add file → Upload files** on this folder (branch

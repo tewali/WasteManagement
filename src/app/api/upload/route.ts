@@ -28,6 +28,14 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "file mancante" }, { status: 400 });
   }
+  const isPdf =
+    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  if (!isPdf) {
+    return NextResponse.json(
+      { error: "sono accettati solo file PDF" },
+      { status: 415 },
+    );
+  }
 
   const buffer = Buffer.from(await file.arrayBuffer());
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
