@@ -17,8 +17,9 @@ services:
     name: valli-spa-ai
     runtime: node
     plan: starter
+    region: frankfurt
     buildCommand: npm ci && npm run build
-    startCommand: npm run start
+    startCommand: npm run start # next start binds to Render's PORT env var
     healthCheckPath: /
     autoDeploy: true
     envVars:
