@@ -190,6 +190,10 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
   const lines = seed.lines
     .map((l) => `- id "${l.id}": ${l.name} (${l.operation}) — EER ammessi: ${l.admissible_eer.join(", ")}`)
     .join("\n");
+  const singleLineNote =
+    seed.lines.length === 1
+      ? `\nL'impianto ha un'UNICA linea operativa (${seed.lines[0].name}, id "${seed.lines[0].id}"): assumi sempre questa linea per ogni verifica di accettazione, senza chiederla all'utente.`
+      : "";
 
   let docContext = "Nessun documento attivo nella conversazione.";
   if (analysis && document) {
@@ -212,7 +216,7 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
     `esclusivamente su quei risultati. L'interfaccia mostra all'utente una tabella dettagliata dell'esito: nel testo ` +
     `commenta i punti salienti (parametri non conformi, non determinati, vincoli bloccanti) senza ripetere tutta la tabella.\n\n` +
     `Le tabelle limiti sono in stato SIMULATO/da validare: se esegui una verifica, ricordalo brevemente.\n\n` +
-    `Tabelle limiti disponibili:\n${tables}\n\nLinee dell'impianto:\n${lines}\n\n${docContext}`
+    `Tabelle limiti disponibili:\n${tables}\n\nLinee dell'impianto:\n${lines}${singleLineNote}\n\n${docContext}`
   );
 }
 

@@ -309,19 +309,23 @@ export default function DocPanel({
           <div className="flex items-center gap-3 py-[7px]">
             <dt className="w-[130px] shrink-0 text-[12.5px] text-slate-500">Linea impianto</dt>
             <dd className="flex-1 text-right">
-              <select
-                value={lineId}
-                onChange={(e) => onChangeLine(e.target.value)}
-                className="rounded border border-transparent bg-transparent text-right text-[12.5px] font-medium text-slate-800 hover:border-slate-200 focus:border-brand focus:outline-none"
-              >
-                {lines.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.name.replace("Linea 1 — ", "").replace("Linea 2 — ", "").replace("Linea 3 — ", "")}
-                    {" - "}
-                    {l.id === "L1-soil-washing" ? "Linea 1" : l.id === "L2-inertizzazione" ? "Linea 2" : "Linea 3"}
-                  </option>
-                ))}
-              </select>
+              {lines.length === 1 ? (
+                <span className="text-[12.5px] font-medium text-slate-800">
+                  {lines[0].name.replace(/^Linea (\d+) — (.*)$/, "$2 - Linea $1")}
+                </span>
+              ) : (
+                <select
+                  value={lineId}
+                  onChange={(e) => onChangeLine(e.target.value)}
+                  className="rounded border border-transparent bg-transparent text-right text-[12.5px] font-medium text-slate-800 hover:border-slate-200 focus:border-brand focus:outline-none"
+                >
+                  {lines.map((l, i) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name.replace(/^Linea \d+ — /, "")} - Linea {i + 1}
+                    </option>
+                  ))}
+                </select>
+              )}
             </dd>
           </div>
           {verification && (

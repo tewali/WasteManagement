@@ -18,36 +18,14 @@
       "id": "L1-soil-washing",
       "name": "Linea 1 — Soil Washing",
       "operation": "R5",
-      "description": "Lavaggio terre e rocce e rifiuti C&D per produzione di aggregati/terreno End of Waste.",
+      "description": "Lavaggio terre e rocce e rifiuti C&D per produzione di aggregati/terreno End of Waste. Unica linea operativa dell'impianto: ogni verifica di accettazione si riferisce a questa linea.",
       "admissible_eer": ["17 05 03*", "17 05 04", "17 09 03*", "17 09 04", "20 02 02"],
       "annual_capacity_t": 60000,
       "limit_bindings": [
         { "limit_table_id": "tab5-121-2020-colA", "purpose": "EoW — destinazione verde pubblico/privato e residenziale (target primario)" },
         { "limit_table_id": "tab5-121-2020-colB", "purpose": "EoW — destinazione commerciale e industriale" },
-        { "limit_table_id": "pop-reg-2019-1021", "purpose": "Vincolo bloccante POP — sempre applicato", "blocking": true }
-      ]
-    },
-    {
-      "id": "L2-inertizzazione",
-      "name": "Linea 2 — Inertizzazione / stabilizzazione",
-      "operation": "D9",
-      "description": "Trattamento chimico-fisico per conferimento in discarica a valle.",
-      "admissible_eer": ["17 05 04", "19 12 12", "19 13 02", "10 01 01"],
-      "annual_capacity_t": 30000,
-      "limit_bindings": [
-        { "limit_table_id": "eluato-discarica-inerti", "purpose": "Ammissibilità discarica rifiuti inerti (verifica in uscita / conferimento diretto)" },
-        { "limit_table_id": "eluato-discarica-non-pericolosi", "purpose": "Ammissibilità discarica rifiuti non pericolosi" },
-        { "limit_table_id": "pop-reg-2019-1021", "purpose": "Vincolo bloccante POP — sempre applicato", "blocking": true }
-      ]
-    },
-    {
-      "id": "L3-stoccaggio",
-      "name": "Linea 3 — Stoccaggio",
-      "operation": "R13/D15",
-      "description": "Messa in riserva / deposito preliminare in attesa di destino.",
-      "admissible_eer": ["17 05 03*", "17 05 04", "17 09 03*", "17 09 04", "19 12 12", "19 13 01*", "19 13 02"],
-      "annual_capacity_t": 15000,
-      "limit_bindings": [
+        { "limit_table_id": "eluato-discarica-inerti", "purpose": "Routing di destino — ammissibilità discarica inerti per i flussi non recuperabili" },
+        { "limit_table_id": "eluato-discarica-non-pericolosi", "purpose": "Routing di destino — ammissibilità discarica non pericolosi" },
         { "limit_table_id": "pop-reg-2019-1021", "purpose": "Vincolo bloccante POP — sempre applicato", "blocking": true }
       ]
     }

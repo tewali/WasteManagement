@@ -204,6 +204,15 @@ export default function ChatApp({
       });
       return;
     }
+    // Show the uploaded PDF in the chat immediately — the dropzone/empty state
+    // disappears now, and the typing indicator covers the extraction time.
+    pushMessage({
+      id: mid(),
+      role: "user",
+      time: now(),
+      text: `Ho caricato il rapporto di prova "${file.name}": puoi analizzarlo e verificarne la conformità?`,
+      attachment: { document_id: "", filename: file.name },
+    });
     setBusy(true);
     try {
       const fd = new FormData();
@@ -230,13 +239,6 @@ export default function ChatApp({
       setAnalysis(data.analysis);
       setAttachments((prev) => [data.document, ...prev]);
       setPanelOpen(true);
-      pushMessage({
-        id: mid(),
-        role: "user",
-        time: now(),
-        text: `Ho caricato il rapporto di prova "${file.name}": puoi analizzarlo e verificarne la conformità?`,
-        attachment: { document_id: data.document.id, filename: file.name },
-      });
       // Be explicit when the panel shows demo data instead of a real extraction —
       // in plain language, without technical error details (those go to the server log).
       if (data.extraction_source === "fixture") {
