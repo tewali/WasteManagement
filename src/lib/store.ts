@@ -74,6 +74,14 @@ export const store = {
   conversation(id: string) {
     return load().conversations.find((c) => c.id === id) ?? null;
   },
+  deleteConversation(id: string): boolean {
+    const d = load();
+    const i = d.conversations.findIndex((c) => c.id === id);
+    if (i < 0) return false;
+    d.conversations.splice(i, 1);
+    save();
+    return true;
+  },
   document(id: string) {
     return load().documents.find((x) => x.id === id) ?? null;
   },

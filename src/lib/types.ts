@@ -163,6 +163,8 @@ export interface ChatMessage {
 export interface Conversation {
   id: string;
   title: string;
+  /** True once the user renamed the chat — auto-titling then leaves it alone. */
+  title_custom?: boolean;
   created_at: string;
   messages: ChatMessage[];
   active_document_id: string | null;
