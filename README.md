@@ -78,6 +78,12 @@ to Render Postgres in Phase 2; uploaded documents stay on the disk.
   outcomes, top EER codes, line capacity utilization) derived from movements,
   verifications and omologhe. Multi-plant reporting lands with the Postgres
   tenancy migration.
+- **Utenti e accessi** (admins only): invite, add and remove company accounts.
+  Invites are one-time registration links (14-day validity, optional
+  email-lock) with the role fixed by the admin — the public form can never
+  self-assign elevated roles; no email is sent, the admin shares the link.
+  Protections: you cannot remove your own account, and the company always
+  keeps at least one administrator.
 
 **Authentication:** Auth.js (next-auth v5) with email/password credentials —
 register at `/register` (internal operator or producer account), login at

@@ -27,11 +27,17 @@ import {
   IconHistory,
   IconLeaf,
   IconPlant,
+  IconShield,
   IconTruck,
   IconUsers,
 } from "./icons";
 
-const NAV = [
+const NAV: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  adminOnly?: boolean;
+}[] = [
   { href: "/", label: "Chat con Anna", icon: IconChat },
   { href: "/dashboard", label: "Dashboard", icon: IconGauge },
   { href: "/conversazioni", label: "Le mie chat", icon: IconHistory },
@@ -41,12 +47,15 @@ const NAV = [
   { href: "/movimenti", label: "Movimenti e FIR", icon: IconTruck },
   { href: "/portale-clienti", label: "Portale clienti", icon: IconUsers },
   { href: "/impianti", label: "Impianti e linee", icon: IconPlant },
+  { href: "/utenti", label: "Utenti e accessi", icon: IconShield, adminOnly: true },
   { href: "/normativa", label: "Normativa e procedure", icon: IconBook },
   { href: "/storico", label: "Storico richieste", icon: IconClock },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   return (
     <aside className="flex w-[335px] shrink-0 flex-col bg-forest-900 text-white">
       {/* Logo */}
@@ -72,7 +81,7 @@ export default function Sidebar() {
 
       {/* Nav — takes the remaining height (~50% of the viewport on desktop) */}
       <nav className="mt-2 min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-1">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.filter((item) => !item.adminOnly || isAdmin).map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
