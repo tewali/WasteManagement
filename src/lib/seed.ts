@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { Analyte, LimitTable, PlantLine, SeedReport } from "./types";
+import type { Analyte, LimitTable, MovementRecord, PlantLine, SeedReport } from "./types";
 
 const SEED_DIR = path.join(process.cwd(), "seed");
 
@@ -16,6 +16,7 @@ let cache: {
   plant: { id: string; name: string; authorization: { reference: string } };
   producers: { id: string; name: string }[];
   reports: SeedReport[];
+  movements: MovementRecord[];
 } | null = null;
 
 export function getSeed() {
@@ -36,6 +37,7 @@ export function getSeed() {
     .readdirSync(reportsDir)
     .filter((f) => f.endsWith(".json"))
     .map((f) => JSON.parse(fs.readFileSync(path.join(reportsDir, f), "utf-8")) as SeedReport);
+  const movements = readJson<{ movements: MovementRecord[] }>("movements.json").movements;
   cache = {
     analytes,
     analyteByKey: new Map(analytes.map((a) => [a.key, a])),
@@ -44,6 +46,7 @@ export function getSeed() {
     plant: plantFile.plant,
     producers,
     reports,
+    movements,
   };
   return cache;
 }

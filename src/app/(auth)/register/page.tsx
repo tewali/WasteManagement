@@ -7,7 +7,8 @@ import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", email: "", password: "", title: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", title: "", company: "" });
+  const [accountType, setAccountType] = useState<"staff" | "producer">("staff");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -21,7 +22,7 @@ export default function RegisterPage() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, account_type: accountType }),
     });
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };
@@ -39,7 +40,7 @@ export default function RegisterPage() {
     if (login?.error) {
       router.push("/login");
     } else {
-      router.push("/");
+      router.push(accountType === "producer" ? "/portale" : "/");
       router.refresh();
     }
   }
@@ -52,6 +53,25 @@ export default function RegisterPage() {
           Registrati al portale tecnico di Valli S.p.A.
         </p>
         <form onSubmit={submit} className="mt-6 space-y-4">
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+            {(
+              [
+                ["staff", "Operatore Valli"],
+                ["producer", "Cliente produttore"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setAccountType(value)}
+                className={`h-9 rounded-md text-[12.5px] font-semibold transition ${
+                  accountType === value ? "bg-white text-brand-dark shadow-sm" : "text-slate-500"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <label className="block">
             <span className="mb-1 block text-[12px] font-semibold text-slate-600">
               Nome e cognome
@@ -65,17 +85,32 @@ export default function RegisterPage() {
               className="h-11 w-full rounded-lg border border-slate-200 px-3.5 text-[14px] outline-none focus:border-brand"
             />
           </label>
-          <label className="block">
-            <span className="mb-1 block text-[12px] font-semibold text-slate-600">
-              Ruolo (facoltativo)
-            </span>
-            <input
-              value={form.title}
-              onChange={set("title")}
-              placeholder="Tecnico Ambientale"
-              className="h-11 w-full rounded-lg border border-slate-200 px-3.5 text-[14px] outline-none focus:border-brand"
-            />
-          </label>
+          {accountType === "staff" ? (
+            <label className="block">
+              <span className="mb-1 block text-[12px] font-semibold text-slate-600">
+                Ruolo (facoltativo)
+              </span>
+              <input
+                value={form.title}
+                onChange={set("title")}
+                placeholder="Tecnico Ambientale"
+                className="h-11 w-full rounded-lg border border-slate-200 px-3.5 text-[14px] outline-none focus:border-brand"
+              />
+            </label>
+          ) : (
+            <label className="block">
+              <span className="mb-1 block text-[12px] font-semibold text-slate-600">
+                Azienda produttrice
+              </span>
+              <input
+                required
+                value={form.company}
+                onChange={set("company")}
+                placeholder="Costruzioni Bianchi S.r.l."
+                className="h-11 w-full rounded-lg border border-slate-200 px-3.5 text-[14px] outline-none focus:border-brand"
+              />
+            </label>
+          )}
           <label className="block">
             <span className="mb-1 block text-[12px] font-semibold text-slate-600">Email</span>
             <input

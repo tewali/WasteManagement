@@ -9,17 +9,22 @@ export interface UserAccount {
   name: string;
   email: string;
   password_hash: string; // "<salt-hex>:<hash-hex>"
-  role: "admin" | "operator" | "acceptance";
+  role: "admin" | "operator" | "acceptance" | "producer";
   title: string;
+  /** Producer accounts (portale clienti): the company they submit for. */
+  company?: string;
   created_at: string;
 }
 
 const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), ".data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
 
-// Demo account created on first run so the app is usable out of the box.
+// Demo accounts created on first run so the app is usable out of the box.
 export const DEMO_EMAIL = "a.parolini@vallispa.example";
 export const DEMO_PASSWORD = "valli-demo";
+// Demo customer for the portale clienti (Phase 3).
+export const DEMO_PRODUCER_EMAIL = "m.rossi@bianchicostruzioni.example";
+export const DEMO_PRODUCER_PASSWORD = "cliente-demo";
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16);
@@ -57,6 +62,21 @@ function load(): UserAccount[] {
     ];
     save();
   }
+  // The demo producer is added even to an existing store (deploys created
+  // before Phase 3 already have a users.json without it).
+  if (!cache.some((u) => u.email === DEMO_PRODUCER_EMAIL)) {
+    cache.push({
+      id: "usr_demo_producer",
+      name: "Marco Rossi",
+      email: DEMO_PRODUCER_EMAIL,
+      password_hash: hashPassword(DEMO_PRODUCER_PASSWORD),
+      role: "producer",
+      title: "Cliente produttore",
+      company: "Costruzioni Bianchi S.r.l.",
+      created_at: new Date().toISOString(),
+    });
+    save();
+  }
   return cache;
 }
 
@@ -72,15 +92,24 @@ export const users = {
   byId(id: string): UserAccount | null {
     return load().find((u) => u.id === id) ?? null;
   },
-  create(input: { name: string; email: string; password: string; title?: string }): UserAccount {
+  create(input: {
+    name: string;
+    email: string;
+    password: string;
+    title?: string;
+    role?: UserAccount["role"];
+    company?: string;
+  }): UserAccount {
     const list = load();
+    const role = input.role === "producer" ? "producer" : "operator";
     const user: UserAccount = {
       id: `usr_${Date.now().toString(36)}${randomBytes(3).toString("hex")}`,
       name: input.name.trim(),
       email: input.email.trim().toLowerCase(),
       password_hash: hashPassword(input.password),
-      role: "operator",
-      title: input.title?.trim() || "Operatore",
+      role,
+      title: input.title?.trim() || (role === "producer" ? "Cliente produttore" : "Operatore"),
+      ...(role === "producer" ? { company: input.company?.trim() || input.name.trim() } : {}),
       created_at: new Date().toISOString(),
     };
     list.push(user);

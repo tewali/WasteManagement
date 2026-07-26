@@ -171,6 +171,34 @@ export const IconSave = (p: P) =>
       <path d="M17 21v-8H7v8M7 3v5h8" />
     </>,
   );
+export const IconTruck = (p: P) =>
+  base(
+    p,
+    <>
+      <path d="M1 6h13v11H1z" />
+      <path d="M14 10h4l3 3v4h-7" />
+      <circle cx="5.5" cy="17" r="1.8" />
+      <circle cx="17.5" cy="17" r="1.8" />
+    </>,
+  );
+export const IconUsers = (p: P) =>
+  base(
+    p,
+    <>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </>,
+  );
+export const IconGauge = (p: P) =>
+  base(
+    p,
+    <>
+      <path d="M12 15 8.5 9.5" />
+      <path d="M3.34 17a10 10 0 1 1 17.32 0" />
+    </>,
+  );
 export const IconPdf = ({ size = 22, ...props }: P) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" {...props}>
     <path
