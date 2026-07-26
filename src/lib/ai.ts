@@ -15,8 +15,10 @@
 // any AI failure the caller falls back to the deterministic demo path.
 
 import Anthropic from "@anthropic-ai/sdk";
+import { suggestLines } from "./line-suggest";
 import { runVerification } from "./rules-engine";
 import { analyteLabel, getSeed } from "./seed";
+import { store } from "./store";
 import type {
   AnalysisRecord,
   DocumentRecord,
@@ -187,12 +189,13 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
   const tables = seed.tables
     .map((t) => `- id "${t.id}": ${t.name} [base: ${t.basis}] — ${t.normativa}`)
     .join("\n");
-  const lines = seed.lines
+  const plantLines = store.lines();
+  const lines = plantLines
     .map((l) => `- id "${l.id}": ${l.name} (${l.operation}) — EER ammessi: ${l.admissible_eer.join(", ")}`)
     .join("\n");
   const singleLineNote =
-    seed.lines.length === 1
-      ? `\nL'impianto ha un'UNICA linea operativa (${seed.lines[0].name}, id "${seed.lines[0].id}"): assumi sempre questa linea per ogni verifica di accettazione, senza chiederla all'utente.`
+    plantLines.length === 1
+      ? `\nL'impianto ha un'UNICA linea operativa (${plantLines[0].name}, id "${plantLines[0].id}"): assumi sempre questa linea per ogni verifica di accettazione, senza chiederla all'utente.`
       : "";
 
   let docContext = "Nessun documento attivo nella conversazione.";
@@ -235,7 +238,7 @@ export async function annaChat(opts: {
 }): Promise<AiChatResult> {
   const seed = getSeed();
   const tableIds = seed.tables.map((t) => t.id);
-  const lineIds = seed.lines.map((l) => l.id);
+  const lineIds = store.lines().map((l) => l.id);
 
   const tools: Anthropic.Beta.BetaToolUnion[] = [
     {
@@ -253,6 +256,20 @@ export async function annaChat(opts: {
           table_id: { type: "string", enum: tableIds },
           line_id: { type: "string", enum: lineIds },
         },
+      },
+    },
+    {
+      name: "suggest_line",
+      description:
+        "Valuta su quali linee dell'impianto il rifiuto del documento attivo può essere accettato: " +
+        "ammissibilità del codice EER, vincolo bloccante POP e verdetto contro ogni tabella limiti della linea. " +
+        "Da chiamare quando l'utente chiede quale linea può accettare il rifiuto o se è accettabile in impianto.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        additionalProperties: false,
+        required: [],
+        properties: {},
       },
     },
   ];
@@ -283,6 +300,35 @@ export async function annaChat(opts: {
       const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
       for (const block of response.content) {
         if (block.type !== "tool_use") continue;
+        if (block.name === "suggest_line") {
+          results.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            ...(opts.analysis
+              ? {
+                  content: JSON.stringify(
+                    suggestLines(opts.analysis).map((s) => ({
+                      linea: s.line.name,
+                      eer_ammesso: s.eer_admissible,
+                      vincolo_pop: s.pop_blocked,
+                      esito: s.esito,
+                      motivo: s.motivo,
+                      tabelle: s.table_results.map((t) => ({
+                        tabella: t.name,
+                        finalita: t.purpose,
+                        esito: t.overall,
+                        conteggi: t.counts,
+                      })),
+                    })),
+                  ),
+                }
+              : {
+                  content: "Nessun documento attivo: chiedere all'utente di caricare un rapporto di prova.",
+                  is_error: true,
+                }),
+          });
+          continue;
+        }
         const input = block.input as { table_id: string; line_id: string };
         const table = seed.tables.find((t) => t.id === input.table_id);
         if (table && opts.analysis) {

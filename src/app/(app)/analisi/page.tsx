@@ -1,6 +1,6 @@
 import PageShell from "@/components/PageShell";
 import { EsitoBlock } from "@/components/chat/EsitoCard";
-import { IconPdf } from "@/components/icons";
+import { IconDownload, IconPdf } from "@/components/icons";
 import { store } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +42,14 @@ export default function AnalisiPage() {
                       Vincolo POP
                     </span>
                   )}
+                  <a
+                    href={`/api/verifications/${v.id}/pdf`}
+                    className="flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1 text-[11.5px] font-semibold text-slate-600 hover:border-brand/50 hover:text-brand-dark"
+                    title="Scarica l'esito come PDF"
+                  >
+                    <IconDownload size={13} />
+                    Esporta PDF
+                  </a>
                 </div>
                 <div className="mt-1.5 text-[12px] text-slate-500">
                   {v.limit_table_name.split("(")[0].trim()} · {v.normativa.split("(")[0].trim()} ·{" "}
