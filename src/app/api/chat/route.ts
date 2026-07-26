@@ -18,6 +18,8 @@ export async function POST(req: NextRequest) {
     document_id?: string | null;
     table_id?: string | null;
     line_id?: string | null;
+    /** Set by the upload flow: verify against every active plant table. */
+    full_check?: boolean;
   };
 
   const document = body.document_id ? store.document(body.document_id) : null;
@@ -32,6 +34,7 @@ export async function POST(req: NextRequest) {
         history: body.history ?? [],
         analysis,
         document,
+        fullCheck: body.full_check,
       });
       engine = "claude";
     } catch {
@@ -45,6 +48,7 @@ export async function POST(req: NextRequest) {
       document,
       defaultTableId: body.table_id,
       defaultLineId: body.line_id,
+      fullCheck: body.full_check,
     });
   }
 

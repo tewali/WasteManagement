@@ -6,6 +6,7 @@
 // fallback keeps the demo fully functional offline.
 
 import { suggestLines } from "./line-suggest";
+import { plantCheckLines, runPlantCheck, shortTableName } from "./plant-check";
 import { runVerification } from "./rules-engine";
 import { analyteLabel, defaultLineId, getSeed, getTable, standardTableId } from "./seed";
 import { store } from "./store";
@@ -48,7 +49,7 @@ function wantsVerification(message: string): boolean {
   return /verific|conform|confront|accetta|analizz|limiti|ammissib/i.test(message);
 }
 
-function inquadramento(analysis: AnalysisRecord, lineId: string | null, table: { name: string; normativa: string }): MessageBlock {
+function inquadramento(analysis: AnalysisRecord, lineId: string | null, limits: string): MessageBlock {
   const eer = analysis.header.eer_declared;
   const line = lineId ? store.line(lineId) : null;
   return {
@@ -57,10 +58,13 @@ function inquadramento(analysis: AnalysisRecord, lineId: string | null, table: {
       { label: "CER", value: `${eer} (${EER_DESCRIPTIONS[eer] ?? analysis.header.waste_description})` },
       { label: "Tipologia rifiuto", value: (analysis.header.waste_description || analysis.header.sample_type || "").replace(/^./, (c) => c.toLowerCase()) },
       ...(line ? [{ label: "Linea di destinazione", value: line.name.replace(/^Linea \d+ — /, "") }] : []),
-      { label: "Limiti di riferimento", value: `${table.name} – ${table.normativa.split("(")[0].trim()}` },
+      { label: "Limiti di riferimento", value: limits },
     ],
   };
 }
+
+const tableLimitsLabel = (table: { name: string; normativa: string }) =>
+  `${table.name} – ${table.normativa.split("(")[0].trim()}`;
 
 function conclusione(v: VerificationResult, lineId: string | null): MessageBlock {
   const line = lineId ? store.line(lineId) : null;
@@ -104,6 +108,50 @@ function conclusione(v: VerificationResult, lineId: string | null): MessageBlock
   };
 }
 
+/**
+ * Conclusione for a full plant check: one line per evaluated table, tone driven
+ * by the blocking layer first, then by how many tables are met.
+ */
+function conclusioneMulti(
+  check: ReturnType<typeof runPlantCheck>,
+  lineId: string | null,
+): MessageBlock {
+  const line = lineId ? store.line(lineId) : null;
+  const lineName = line?.name.replace(/^Linea \d+ — /, "");
+  const blocked = check.verifications.find((v) => v.blocking);
+  if (blocked) {
+    return {
+      type: "conclusione",
+      tone: "ko",
+      title: "Vincolo POP superato — rifiuto non ammissibile su nessuna linea",
+      lines: plantCheckLines(check),
+      footer: blocked.blocking_consequence,
+    };
+  }
+
+  const conformi = check.verifications.filter((v) => v.overall === "conforme");
+  const total = check.verifications.length;
+  const allOk = conformi.length === total && total > 0;
+  const noneOk = conformi.length === 0 && total > 0;
+  const nd = check.verifications.some((v) => v.counts.non_determinato > 0);
+
+  return {
+    type: "conclusione",
+    tone: noneOk ? "ko" : allOk && !nd ? "ok" : "warn",
+    title: allOk
+      ? `Il rifiuto è conforme a tutte le ${total} tabelle limiti valutate`
+      : noneOk
+        ? `Il rifiuto non è conforme a nessuna delle ${total} tabelle limiti valutate`
+        : `Il rifiuto è conforme a ${conformi.length} tabelle su ${total} valutate`,
+    lines: plantCheckLines(check),
+    footer: lineName
+      ? conformi.some((v) => v.limit_table_id.includes("tab5"))
+        ? `Accettabile sulla linea ${lineName} secondo almeno una delle tabelle di riferimento.`
+        : `Non accettabile sulla linea ${lineName} per l'ottenimento di EoW ai sensi del D.Lgs. 121/2020.`
+      : undefined,
+  };
+}
+
 export interface AnnaReply {
   blocks: MessageBlock[];
   verification: VerificationResult | null;
@@ -118,6 +166,8 @@ export function annaRespond(opts: {
   document: DocumentRecord | null;
   defaultTableId?: string | null;
   defaultLineId?: string | null;
+  /** Upload flow: check against every limit table active in the plant. */
+  fullCheck?: boolean;
 }): AnnaReply {
   const { message, analysis, document } = opts;
   const seed = getSeed();
@@ -144,6 +194,50 @@ export function annaRespond(opts: {
       table_id: tableId,
       line_id: lineId,
     };
+  }
+
+  // Upload flow: the report is measured against every active plant table.
+  if (opts.fullCheck || /tutte le tabelle|tutte le verifiche|verifica completa/i.test(message)) {
+    const check = runPlantCheck(analysis.parameters, plantLines, lineId);
+    if (check.verifications.length > 0) {
+      const names = check.verifications.map((v) => shortTableName(v.limit_table_name));
+      const blocks: MessageBlock[] = [
+        {
+          type: "text",
+          text:
+            `Ho analizzato il rapporto di prova allegato: "${document.filename}". ` +
+            `Ho confrontato i risultati con tutte le tabelle limiti attive nell'impianto ` +
+            `(${names.length}: ${names.join("; ")}).`,
+        },
+        inquadramento(analysis, lineId, `${names.length} tabelle attive — ${names.join("; ")}`),
+        ...check.verifications.map((verification) => ({
+          type: "esito" as const,
+          verification,
+          document_name: document.filename,
+        })),
+        ...(check.skipped.length > 0
+          ? [
+              {
+                type: "text" as const,
+                text:
+                  `*Tabelle attive non valutabili con i parametri disponibili:* ` +
+                  check.skipped
+                    .map((s) => `${shortTableName(s.table.name)} — ${s.reason}`)
+                    .join("; ") +
+                  ".",
+              },
+            ]
+          : []),
+        conclusioneMulti(check, lineId),
+      ];
+      return {
+        blocks,
+        verification: check.verifications[0],
+        verifications: check.verifications,
+        table_id: check.verifications[0].limit_table_id,
+        line_id: lineId,
+      };
+    }
   }
 
   // Line suggestion: "quale linea può accettarlo?"
@@ -190,7 +284,7 @@ export function annaRespond(opts: {
         type: "text",
         text: `Ho analizzato il rapporto di prova allegato: "${document.filename}". Ecco il risultato del confronto con i limiti della ${table.name.split("(")[0].trim()}${colDesc}.`,
       },
-      inquadramento(analysis, lineId, table),
+      inquadramento(analysis, lineId, tableLimitsLabel(table)),
       { type: "esito", verification, document_name: document.filename },
       conclusione(verification, lineId),
     ];

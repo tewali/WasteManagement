@@ -41,8 +41,13 @@ function shortLimitHeader(v: VerificationResult): string {
 
 export function EsitoBlock({ verification }: { verification: VerificationResult }) {
   const [expanded, setExpanded] = useState(false);
-  const rows = expanded ? verification.verdicts : verification.verdicts.slice(0, 8);
-  const hasMore = verification.verdicts.length > 8;
+  // Only parameters this table actually governs: a table that covers a handful
+  // of analytes (the POP layer) would otherwise render mostly "non applicabile"
+  // rows and bury its own verdict.
+  const governed = verification.verdicts.filter((v) => v.esito !== "non_applicabile");
+  const notGoverned = verification.verdicts.length - governed.length;
+  const rows = expanded ? governed : governed.slice(0, 8);
+  const hasMore = governed.length > 8;
   return (
     <div>
       <div className="mb-2 flex items-center gap-2 text-[13px] font-bold tracking-wide text-slate-800">
@@ -95,15 +100,26 @@ export function EsitoBlock({ verification }: { verification: VerificationResult 
             })}
           </tbody>
         </table>
+        {rows.length === 0 && (
+          <p className="px-3 py-2 text-[12px] text-slate-500">
+            Nessun parametro del rapporto rientra fra quelli previsti da questa tabella.
+          </p>
+        )}
         {hasMore && (
           <button
             onClick={() => setExpanded(!expanded)}
             className="block w-full border-t border-slate-100 bg-slate-50 py-1.5 text-center text-[12px] font-semibold text-brand-dark hover:bg-brand-mist"
           >
-            {expanded ? "Mostra meno" : `Mostra tutti i ${verification.verdicts.length} parametri…`}
+            {expanded ? "Mostra meno" : `Mostra tutti i ${governed.length} parametri…`}
           </button>
         )}
       </div>
+      {notGoverned > 0 && (
+        <p className="mt-2 text-[11.5px] text-slate-500">
+          Altri {notGoverned} parametri del rapporto non sono previsti da questa tabella (non
+          applicabili).
+        </p>
+      )}
       {verification.missing_analytes.length > 0 && (
         <p className="mt-2 text-[11.5px] text-slate-500">
           Parametri previsti dalla tabella ma assenti nel rapporto:{" "}

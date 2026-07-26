@@ -16,6 +16,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { suggestLines } from "./line-suggest";
+import { plantCheckLines, runPlantCheck, shortTableName } from "./plant-check";
 import { runVerification } from "./rules-engine";
 import { analyteLabel, defaultLineId, getSeed, isBlockingTable, standardTableId } from "./seed";
 import { store } from "./store";
@@ -229,7 +230,12 @@ function systemPrompt(analysis: AnalysisRecord | null, document: DocumentRecord 
     `Usa un'altra tabella solo se l'utente la richiede esplicitamente.\n` +
     `Il vincolo POP (tabella "pop-reg-2019-1021") è un controllo BLOCCANTE AGGIUNTIVO: puoi eseguirlo in più ` +
     `rispetto al confronto standard, ma non sostituisce mai il confronto con i limiti standard della linea — ` +
-    `da solo produrrebbe quasi solo esiti "non applicabile" e non risponde alla domanda di accettazione.\n\n` +
+    `da solo produrrebbe quasi solo esiti "non applicabile" e non risponde alla domanda di accettazione.\n` +
+    `Per una verifica completa contro tutte le tabelle attive dell'impianto usa run_plant_check (una sola ` +
+    `chiamata): al caricamento di un nuovo rapporto questa verifica è già stata eseguita automaticamente e i ` +
+    `risultati ti vengono forniti nel messaggio — in quel caso limitati a commentarli.\n` +
+    `Quando i confronti sono più d'uno, commenta l'esito complessivo: quali tabelle sono rispettate, quali no ` +
+    `e con quali parametri fuori limite, e cosa comporta per l'accettazione.\n\n` +
     `Le tabelle limiti sono in stato SIMULATO/da validare: se esegui una verifica, ricordalo brevemente.\n\n` +
     `Tabelle limiti disponibili:\n${tables}\n\nLinee dell'impianto:\n${lines}${singleLineNote}\n\n${docContext}`
   );
@@ -250,6 +256,8 @@ export async function annaChat(opts: {
   history: ChatTurn[];
   analysis: AnalysisRecord | null;
   document: DocumentRecord | null;
+  /** Upload flow: check against every limit table active in the plant. */
+  fullCheck?: boolean;
 }): Promise<AiChatResult> {
   const seed = getSeed();
   const tableIds = seed.tables.map((t) => t.id);
@@ -286,6 +294,21 @@ export async function annaChat(opts: {
       },
     },
     {
+      name: "run_plant_check",
+      description:
+        "Confronta i parametri del documento attivo con TUTTE le tabelle limiti attive nell'impianto " +
+        "(quelle associate alle linee configurate e in vigore), in un'unica passata. Da chiamare quando " +
+        "l'utente chiede una verifica completa o il confronto con tutte le tabelle. Le tabelle non " +
+        "valutabili con i parametri disponibili sono riportate a parte.",
+      strict: true,
+      input_schema: {
+        type: "object",
+        additionalProperties: false,
+        required: [],
+        properties: {},
+      },
+    },
+    {
       name: "suggest_line",
       description:
         "Valuta su quali linee dell'impianto il rifiuto del documento attivo può essere accettato: " +
@@ -301,16 +324,39 @@ export async function annaChat(opts: {
     },
   ];
 
-  const messages: Anthropic.Beta.BetaMessageParam[] = [
-    ...opts.history.slice(-12).map((t) => ({ role: t.role, content: t.text })),
-    { role: "user" as const, content: opts.message },
-  ];
-
   // Every comparison run this turn, in call order. The headline esito is the
   // one against the line's standard limits: a blocking layer (POP) can be run
   // in addition, but must never replace it in the card or in the doc panel.
   const verifications: VerificationResult[] = [];
   let lineId: string | null = null;
+
+  // Upload flow: the battery against every active plant table is computed here,
+  // deterministically, rather than left to the model to request — the check must
+  // happen on every upload. The model receives the numbers and comments on them.
+  let userMessage = opts.message;
+  if (opts.fullCheck && opts.analysis) {
+    const check = runPlantCheck(opts.analysis.parameters, plantLines, defaultLineId(plantLines));
+    verifications.push(...check.verifications);
+    lineId = defaultLineId(plantLines);
+    if (check.verifications.length > 0) {
+      userMessage =
+        `${opts.message}\n\n[Verifica automatica già eseguita dal motore deterministico contro tutte le ` +
+        `tabelle limiti attive nell'impianto. NON richiamare run_comparison o run_plant_check per questi ` +
+        `stessi confronti: commenta questi risultati, già mostrati all'utente come tabelle di esito.\n` +
+        `${plantCheckLines(check).map((l) => `- ${l}`).join("\n")}` +
+        (check.skipped.length > 0
+          ? `\nTabelle attive non valutabili: ${check.skipped
+              .map((s) => `${shortTableName(s.table.name)} (${s.reason})`)
+              .join("; ")}.`
+          : "") +
+        `]`;
+    }
+  }
+
+  const messages: Anthropic.Beta.BetaMessageParam[] = [
+    ...opts.history.slice(-12).map((t) => ({ role: t.role, content: t.text })),
+    { role: "user" as const, content: userMessage },
+  ];
 
   for (let i = 0; i < 4; i++) {
     const response = await createMessage({
@@ -355,6 +401,41 @@ export async function annaChat(opts: {
                   content: "Nessun documento attivo: chiedere all'utente di caricare un rapporto di prova.",
                   is_error: true,
                 }),
+          });
+          continue;
+        }
+        if (block.name === "run_plant_check") {
+          if (!opts.analysis) {
+            results.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: "Nessun documento attivo: chiedere all'utente di caricare un rapporto di prova.",
+              is_error: true,
+            });
+            continue;
+          }
+          const line = lineId ?? defaultLineId(plantLines);
+          const check = runPlantCheck(opts.analysis.parameters, plantLines, line);
+          verifications.push(...check.verifications);
+          lineId = line;
+          results.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: JSON.stringify({
+              tabelle_valutate: check.verifications.map((v) => ({
+                tabella: shortTableName(v.limit_table_name),
+                esito: v.overall,
+                bloccante: v.blocking,
+                conteggi: v.counts,
+                non_conformi: v.verdicts
+                  .filter((x) => x.esito === "non_conforme")
+                  .map((x) => ({ parametro: x.label, risultato: x.result_raw, limite: x.limit_display })),
+              })),
+              tabelle_non_valutabili: check.skipped.map((s) => ({
+                tabella: shortTableName(s.table.name),
+                motivo: s.reason,
+              })),
+            }),
           });
           continue;
         }
@@ -432,10 +513,16 @@ export async function annaChat(opts: {
       }
     }
 
+    // One card per table: the model may re-run a comparison already covered by
+    // the plant battery. Keep the first verdict for each table.
+    const unique = verifications.filter(
+      (v, i) => verifications.findIndex((o) => o.limit_table_id === v.limit_table_id) === i,
+    );
+
     // Standard limits first, blocking layers after — in the card and in the panel.
     const ordered = [
-      ...verifications.filter((v) => !isBlockingTable(v.limit_table_id)),
-      ...verifications.filter((v) => isBlockingTable(v.limit_table_id)),
+      ...unique.filter((v) => !isBlockingTable(v.limit_table_id)),
+      ...unique.filter((v) => isBlockingTable(v.limit_table_id)),
     ];
     const headline = ordered[0] ?? null;
 

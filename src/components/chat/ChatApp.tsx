@@ -133,7 +133,11 @@ export default function ChatApp({
   const pushMessage = (m: ChatMessage) => setMessages((prev) => [...prev, m]);
 
   const askAnna = useCallback(
-    async (text: string, activeDoc: DocumentRecord | null, opts?: { silentUser?: boolean }) => {
+    async (
+      text: string,
+      activeDoc: DocumentRecord | null,
+      opts?: { silentUser?: boolean; fullCheck?: boolean },
+    ) => {
       if (!opts?.silentUser) {
         pushMessage({ id: mid(), role: "user", time: now(), text });
       }
@@ -164,6 +168,7 @@ export default function ChatApp({
             document_id: activeDoc?.id ?? null,
             table_id: tableId,
             line_id: lineId,
+            full_check: opts?.fullCheck ?? false,
           }),
         });
         const data = (await res.json()) as {
@@ -262,9 +267,9 @@ export default function ChatApp({
         });
       }
       await askAnna(
-        `Analizza il rapporto e verifica la conformità rispetto ai limiti standard della linea selezionata`,
+        `Analizza il rapporto e verifica la conformità rispetto a tutte le tabelle limiti attive nell'impianto`,
         data.document,
-        { silentUser: true },
+        { silentUser: true, fullCheck: true },
       );
     } finally {
       setBusy(false);
