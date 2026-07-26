@@ -16,7 +16,13 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { suggestLines } from "./line-suggest";
-import { plantCheckLines, runPlantCheck, shortTableName } from "./plant-check";
+import {
+  buildQuadro,
+  plantCheckLines,
+  runPlantCheck,
+  shortTableName,
+  type PlantCheck,
+} from "./plant-check";
 import { runVerification } from "./rules-engine";
 import { analyteLabel, defaultLineId, getSeed, isBlockingTable, standardTableId } from "./seed";
 import { store } from "./store";
@@ -329,6 +335,9 @@ export async function annaChat(opts: {
   // in addition, but must never replace it in the card or in the doc panel.
   const verifications: VerificationResult[] = [];
   let lineId: string | null = null;
+  // Set when the full plant battery ran, so the reply can carry the aggregated
+  // stoplight (and name the tables the report could not address).
+  let plantCheck: PlantCheck | null = null;
 
   // Upload flow: the battery against every active plant table is computed here,
   // deterministically, rather than left to the model to request — the check must
@@ -337,6 +346,7 @@ export async function annaChat(opts: {
   if (opts.fullCheck && opts.analysis) {
     const check = runPlantCheck(opts.analysis.parameters, plantLines, defaultLineId(plantLines));
     verifications.push(...check.verifications);
+    plantCheck = check;
     lineId = defaultLineId(plantLines);
     if (check.verifications.length > 0) {
       userMessage =
@@ -417,6 +427,7 @@ export async function annaChat(opts: {
           const line = lineId ?? defaultLineId(plantLines);
           const check = runPlantCheck(opts.analysis.parameters, plantLines, line);
           verifications.push(...check.verifications);
+          plantCheck = check;
           lineId = line;
           results.push({
             type: "tool_result",
@@ -526,11 +537,22 @@ export async function annaChat(opts: {
     ];
     const headline = ordered[0] ?? null;
 
-    const blocks: MessageBlock[] = ordered.map((v) => ({
-      type: "esito" as const,
-      verification: v,
-      document_name: opts.document?.filename ?? "",
-    }));
+    const blocks: MessageBlock[] = [];
+    // Aggregated stoplight whenever there is more than one regulation to weigh
+    // up, or the full plant battery ran — summary first, per-table detail after.
+    if (plantCheck || ordered.length > 1) {
+      blocks.push({
+        type: "quadro",
+        quadro: buildQuadro({ verifications: ordered, skipped: plantCheck?.skipped ?? [] }),
+      });
+    }
+    blocks.push(
+      ...ordered.map((v) => ({
+        type: "esito" as const,
+        verification: v,
+        document_name: opts.document?.filename ?? "",
+      })),
+    );
     if (text) blocks.push({ type: "text", text });
     if (blocks.length === 0) blocks.push({ type: "text", text: "Non ho prodotto una risposta, riprovi." });
     return {

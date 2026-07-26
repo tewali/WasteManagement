@@ -6,7 +6,7 @@
 // fallback keeps the demo fully functional offline.
 
 import { suggestLines } from "./line-suggest";
-import { plantCheckLines, runPlantCheck, shortTableName } from "./plant-check";
+import { buildQuadro, plantCheckLines, runPlantCheck, shortTableName } from "./plant-check";
 import { runVerification } from "./rules-engine";
 import { analyteLabel, defaultLineId, getSeed, getTable, standardTableId } from "./seed";
 import { store } from "./store";
@@ -210,6 +210,8 @@ export function annaRespond(opts: {
             `(${names.length}: ${names.join("; ")}).`,
         },
         inquadramento(analysis, lineId, `${names.length} tabelle attive — ${names.join("; ")}`),
+        // Aggregated stoplight first, per-table detail underneath.
+        { type: "quadro" as const, quadro: buildQuadro(check) },
         ...check.verifications.map((verification) => ({
           type: "esito" as const,
           verification,

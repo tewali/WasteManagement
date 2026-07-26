@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import QuadroBlock from "./QuadroCard";
 import type { MessageBlock, ParamVerdict, VerificationResult } from "@/lib/types";
 
 const ESITO_STYLE: Record<string, { pill: string; label: string }> = {
@@ -164,6 +165,9 @@ export default function MessageBlocks({ blocks }: { blocks: MessageBlock[] }) {
               </ul>
             </div>
           );
+        }
+        if (b.type === "quadro") {
+          return <QuadroBlock key={i} quadro={b.quadro} />;
         }
         if (b.type === "esito") {
           return <EsitoBlock key={i} verification={b.verification} />;

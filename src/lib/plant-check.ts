@@ -10,7 +10,15 @@
 
 import { runVerification } from "./rules-engine";
 import { analyteLabel, getTable, standardTableId } from "./seed";
-import type { LimitTable, PlantLine, ReportParameter, VerificationResult } from "./types";
+import type {
+  LimitTable,
+  PlantLine,
+  QuadroData,
+  QuadroRow,
+  QuadroStatus,
+  ReportParameter,
+  VerificationResult,
+} from "./types";
 
 /** True when `at` falls inside the table's validity window. */
 export function isTableInForce(table: LimitTable, at: Date = new Date()): boolean {
@@ -86,6 +94,73 @@ export function runPlantCheck(
 
 /** Short table name for prose: drops the parenthetical. */
 export const shortTableName = (name: string) => name.split("(")[0].trim();
+
+/**
+ * Stoplight for a single table.
+ *  bloccante    — a blocking layer (POP) is exceeded: no destination at all
+ *  non_conforme — at least one parameter over the limit
+ *  riserve      — within limits, but some parameter could not be determined
+ *                 (LOQ above the limit), so adherence is not demonstrated
+ *  conforme     — every evaluated parameter within limits
+ */
+function rowStatus(v: VerificationResult): QuadroStatus {
+  if (v.overall === "non_conforme") return v.blocking ? "bloccante" : "non_conforme";
+  return v.counts.non_determinato > 0 ? "riserve" : "conforme";
+}
+
+/**
+ * Aggregated compliance picture across the active tables: one stoplight per
+ * table plus the overall verdict. A blocking exceedance dominates everything;
+ * otherwise the plant is only fully green when every table is clean.
+ */
+export function buildQuadro(check: PlantCheck): QuadroData {
+  const rows: QuadroRow[] = check.verifications.map((v) => ({
+    limit_table_id: v.limit_table_id,
+    table_name: shortTableName(v.limit_table_name),
+    normativa: v.normativa.split("(")[0].trim(),
+    status: rowStatus(v),
+    blocking: Boolean(v.blocking) || v.limit_table_id.startsWith("pop"),
+    counts: v.counts,
+    evaluated_total: v.evaluated_total,
+    offenders: v.verdicts
+      .filter((x) => x.esito === "non_conforme")
+      .map((x) => x.label.replace(/\s*\(.*\)$/, "")),
+  }));
+
+  const total = rows.length;
+  const green = rows.filter((r) => r.status === "conforme").length;
+  const usable = rows.filter((r) => r.status === "conforme" || r.status === "riserve").length;
+  const blocked = rows.some((r) => r.status === "bloccante");
+
+  let overall: QuadroStatus;
+  let headline: string;
+  if (blocked) {
+    overall = "bloccante";
+    headline = "Vincolo bloccante superato — il rifiuto non è avviabile né a recupero né a discarica.";
+  } else if (total === 0) {
+    overall = "riserve";
+    headline = "Nessuna tabella attiva è valutabile con i parametri disponibili.";
+  } else if (green === total) {
+    overall = "conforme";
+    headline = `Conforme a tutte le ${total} tabelle limiti attive valutate.`;
+  } else if (usable === 0) {
+    overall = "non_conforme";
+    headline = `Non conforme a nessuna delle ${total} tabelle limiti attive valutate.`;
+  } else {
+    overall = "riserve";
+    headline = `Conforme a ${usable} tabelle su ${total}: la destinazione va scelta fra quelle rispettate.`;
+  }
+
+  return {
+    overall,
+    headline,
+    rows,
+    skipped: check.skipped.map((s) => ({
+      table_name: shortTableName(s.table.name),
+      reason: s.reason,
+    })),
+  };
+}
 
 /** One-line-per-table recap used by the conclusione block. */
 export function plantCheckLines(check: PlantCheck): string[] {

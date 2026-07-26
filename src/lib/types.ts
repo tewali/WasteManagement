@@ -225,9 +225,34 @@ export interface VerificationRecord extends VerificationResult {
   requested_by: string;
 }
 
+// ---- quadro di conformità (aggregated stoplight across active tables) ----
+
+/** Stoplight state. `bloccante` is red-plus: a blocking layer was exceeded. */
+export type QuadroStatus = "conforme" | "riserve" | "non_conforme" | "bloccante";
+
+export interface QuadroRow {
+  limit_table_id: string;
+  table_name: string;
+  normativa: string;
+  status: QuadroStatus;
+  blocking: boolean;
+  counts: Record<Esito, number>;
+  evaluated_total: number;
+  /** Parameters that put the table in the red, for the row's caption. */
+  offenders: string[];
+}
+
+export interface QuadroData {
+  overall: QuadroStatus;
+  headline: string;
+  rows: QuadroRow[];
+  skipped: { table_name: string; reason: string }[];
+}
+
 export type MessageBlock =
   | { type: "text"; text: string }
   | { type: "inquadramento"; items: { label: string; value: string }[] }
+  | { type: "quadro"; quadro: QuadroData }
   | { type: "esito"; verification: VerificationResult; document_name: string }
   | { type: "conclusione"; tone: "ok" | "ko" | "warn"; title: string; lines: string[]; footer?: string };
 

@@ -1,6 +1,6 @@
 // The upload battery: every limit table active in the plant, in one pass.
 import { describe, expect, it } from "vitest";
-import { activeLimitTables, isTableInForce, runPlantCheck } from "@/lib/plant-check";
+import { activeLimitTables, buildQuadro, isTableInForce, runPlantCheck } from "@/lib/plant-check";
 import { getSeed, getTable, isBlockingTable, standardTableId } from "@/lib/seed";
 import type { ReportParameter } from "@/lib/types";
 
@@ -103,5 +103,57 @@ describe("runPlantCheck", () => {
     const blocked = check.verifications.find((v) => v.blocking)!;
     expect(blocked.limit_table_id).toBe("pop-reg-2019-1021");
     expect(blocked.overall).toBe("non_conforme");
+  });
+});
+
+describe("buildQuadro — stoplight logic", () => {
+  const quadro = (id: string) =>
+    buildQuadro(runPlantCheck(params(id), lines, "L1-soil-washing"));
+
+  it("marks a table green only when nothing is left undetermined", () => {
+    const q = quadro("R1");
+    const colA = q.rows.find((r) => r.limit_table_id === "tab5-121-2020-colA")!;
+    const colB = q.rows.find((r) => r.limit_table_id === "tab5-121-2020-colB")!;
+
+    // Col. A is exceeded; col. B is within limits but has an undetermined LOQ.
+    expect(colA.status).toBe("non_conforme");
+    expect(colA.offenders).toEqual(["Mercurio", "Zinco"]);
+    expect(colB.status).toBe("riserve");
+    expect(colB.counts.non_determinato).toBeGreaterThan(0);
+  });
+
+  it("aggregates to amber when some tables are met and some are not", () => {
+    const q = quadro("R1");
+    expect(q.overall).toBe("riserve");
+    expect(q.headline).toMatch(/Conforme a 2 tabelle su 3/);
+  });
+
+  it("flags the blocking layer and lets it dominate the overall verdict", () => {
+    for (const id of ["R1", "R2", "R3", "R4"]) {
+      const q = quadro(id);
+      const pop = q.rows.find((r) => r.limit_table_id.startsWith("pop"));
+      if (!pop) continue;
+      expect(pop.blocking).toBe(true);
+      if (pop.status === "bloccante") {
+        expect(q.overall).toBe("bloccante");
+        expect(q.headline).toMatch(/bloccante/i);
+      }
+    }
+  });
+
+  it("carries the skipped tables through to the quadro", () => {
+    const q = quadro("R1");
+    expect(q.skipped.map((s) => s.table_name).join(" ")).toMatch(/discarica/i);
+    for (const s of q.skipped) expect(s.reason).toBeTruthy();
+  });
+
+  it("every row states a status that is never colour-alone", () => {
+    for (const id of ["R1", "R2", "R3", "R4"]) {
+      for (const row of quadro(id).rows) {
+        expect(["conforme", "riserve", "non_conforme", "bloccante"]).toContain(row.status);
+        expect(row.table_name).toBeTruthy();
+        expect(row.evaluated_total).toBeGreaterThan(0);
+      }
+    }
   });
 });

@@ -150,7 +150,9 @@ export default function ChatApp({
             .map((b) =>
               b.type === "text"
                 ? b.text
-                : b.type === "esito"
+                : b.type === "quadro"
+                  ? `[Quadro conformità: ${b.quadro.headline}]`
+                  : b.type === "esito"
                   ? `[Esito ${b.verification.limit_table_name.split("(")[0].trim()}: ${b.verification.counts.conforme} conformi, ${b.verification.counts.non_conforme} non conformi, ${b.verification.counts.non_determinato} non determinati]`
                   : "",
             )
