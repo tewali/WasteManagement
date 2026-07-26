@@ -122,7 +122,10 @@ function UserFooter() {
             Profilo utente
           </Link>
           <button
-            onClick={() => void signOut({ callbackUrl: "/login" })}
+            // redirect: false + relative navigation: Auth.js would otherwise
+            // redirect to the server-inferred origin, which is localhost
+            // behind Render's proxy.
+            onClick={() => void signOut({ redirect: false }).then(() => window.location.assign("/login"))}
             className="block w-full border-t border-white/10 px-4 py-3 text-left text-[13px] font-medium text-red-300 hover:bg-forest-700 hover:text-red-200"
           >
             Esci
