@@ -41,8 +41,14 @@ The rules engine and data model are built around these concepts. Exact table enc
 | **Total vs. eluate** | Reports contain totals (mg/kg s.s.) and leaching-test results (mg/l, UNI EN 12457-2). Landfill criteria are mostly on eluate; CSC/EoW mostly on totals. The engine must distinguish the two and flag when a required determination is missing (*"non determinato"* — 3 of 23 in the mock-up). |
 | **Omologa** | The periodic waste-characterization/homologation cycle between producer and plant: first full characterization, then per-delivery conformity checks with expiry dates. A natural Phase-2 feature. |
 | **RENTRI** | Italy's digital waste-tracking registry (DM 59/2023, mandatory since 2025: registri and FIR digitale). Not in scope for the MVP, but the data model keeps producer/transport/movement entities compatible with a later RENTRI integration. |
+| **POPs limits** | Reg. (EU) 2019/1021 All. IV as tightened by Reg. (EU) 2022/2400: wastes exceeding POP thresholds (PFOA, PFHxS, dioxins/furans, PCB-DL, brominated flame retardants) may not go to material recovery or landfill without destruction/irreversible transformation. The rules engine treats these as an additional **blocking check layer** on top of the line-specific tables — a waste can pass Tabella 5 and still be barred by a POP exceedance. |
+| **HP classification** | Mirror-code assessment per Reg. (EU) 1357/2014 / 2017/997 (HP1–HP15, incl. HP14 ecotox) following the SNPA 105/2021 guidelines (speciation of Cr VI, IPA, C10-C40 hydrocarbons, PFAS). Phase 1 supports it as a guided check with the operator confirming; full HP calculus is Phase 2. |
+| **Authorization regime** | The plant operates under a specific title — Art. 208 ordinary authorization, Artt. 214/216 simplified regime (DM 05/02/1998 / DM 161/2002), AIA (IED plants), or AUA (DPR 59/2013). The authorization defines admissible EER codes, quantities, and operations per line, and is modeled as first-class data (`plant_authorizations`) that constrains every acceptance verdict. |
+| **Discharge/leachate limits** | Plants discharging effluent/percolato must meet Tab. 3, All. 5, Parte III D.Lgs. 152/2006 — relevant later for process-water monitoring on lines like Soil Washing (Phase 3 candidate). |
 
-⚠️ **Open input:** the two Gemini chat links provided as context are not reachable from this environment (the network policy blocks `gemini.google.com`). Any requirements captured there — specific tables, thresholds, workflows — need to be pasted into the repo (e.g. `docs/context/`) or into a session message; the proposal will be reconciled with them.
+📚 The full normative catalog (EU + Italian, classification + plant operation + POPs/PFAS) provided by the owner is preserved in [`docs/context/gemini-1-normativa.md`](context/gemini-1-normativa.md) and is the seed list for the *Normativa e procedure* library.
+
+📄 The second conversation — a fac-simile *rapporto di prova* with tal-quale, POPs, and eluate sections — is preserved in [`docs/context/gemini-2-rapporto-di-prova-facsimile.md`](context/gemini-2-rapporto-di-prova-facsimile.md). It defines the reference structure for the extraction schema and serves as a Phase-1 test fixture (a clean-pass 17 05 04 counterpart to the non-conform 17 09 03* case in the UI mock-up). Two practical lessons folded into the design: incoming reports **embed the lab's own claimed limits and conclusions**, which are extracted but always re-verified against our versioned tables (labs still cite the superseded D.M. 27/09/2010, so old references must be mapped to current criteria); and below-LOQ results sometimes have a LOD equal to the limit itself, so the engine's `<`-semantics are exercised by real data.
 
 ---
 
@@ -62,40 +68,45 @@ Language: **Italian UI** (i18n framework from day one; English as secondary loca
 
 ## 4. Architecture
 
+Hosting platform: **Render**. Chosen over a Vercel + Supabase setup because the roadmap includes **enterprise SSO** (SAML/OIDC for B2B customers — no plan-gated auth add-ons; we own the auth flow in-app) and **heavier backend work** (long-running extraction pipelines, scheduled jobs, future RENTRI integration) that fits an always-on service + background worker + queue better than serverless functions with execution-time limits.
+
 ```mermaid
 flowchart LR
-  subgraph Client["Next.js app (Vercel)"]
-    UI[Chat + Viewer + Config UI]
+  subgraph Render
+    WEB[Next.js web service - UI + API routes]
+    WORKER[Node worker - ingestion pipeline]
+    REDIS[(Render Key Value - BullMQ queue)]
+    PG[(Render Postgres + pgvector)]
   end
-  subgraph Supabase
-    AUTH[Auth]
-    PG[(Postgres + pgvector)]
-    ST[(Storage: documents)]
-    EF[Edge Functions]
-  end
+  R2[(S3-compatible object storage - documents)]
   subgraph AI["Claude API"]
     EXT[Extraction: PDF/image -> structured JSON]
     CHAT[Chat with tool use]
   end
   RULES[Rules engine - deterministic TS lib]
 
-  UI --> AUTH
-  UI --> EF
-  EF --> ST
-  EF --> EXT
+  WEB --> R2
+  WEB --> REDIS
+  WORKER --> REDIS
+  WORKER --> R2
+  WORKER --> EXT
   EXT --> PG
-  EF --> RULES
+  WEB --> RULES
+  WORKER --> RULES
   RULES --> PG
   CHAT --> RULES
-  UI --> CHAT
+  WEB --> CHAT
 ```
 
-- **Frontend:** Next.js (App Router) + TypeScript + Tailwind, deployed on **Vercel**. Server components for lists/config, client components for chat and the PDF viewer (`pdf.js` with bbox highlights of non-conform rows).
-- **Backend:** **Supabase** — Postgres (with **Row Level Security** for multi-tenant isolation per organization), Auth, Storage for uploaded documents, Edge Functions for the ingestion pipeline. (Both platforms are already connected to this workspace.)
+- **Web service:** Next.js (App Router) + TypeScript + Tailwind as a Render web service. Server components for lists/config, client components for chat and the PDF viewer (`pdf.js` with bbox highlights of non-conform rows). API routes serve the app; no separate API service until scale demands it (one repo, one deploy).
+- **Worker + queue:** a Node background worker consumes a **BullMQ** queue (Redis via Render Key Value) for the ingestion pipeline: fetch document → Claude extraction → persist → notify. No timeout pressure on large scanned PDFs; retries and dead-lettering come free with the queue.
+- **Database:** **Render Postgres** with the **pgvector** extension (normativa RAG). Multi-tenant isolation enforced in the application layer (every query scoped by `organization_id` through the ORM), plus append-only audit tables.
+- **Documents:** Render has no object storage, so uploaded reports go to an S3-compatible bucket (Cloudflare R2 or AWS S3) via pre-signed URLs; only references live in Postgres.
+- **Auth & SSO:** in-app via **Auth.js** — email/password + OIDC from day one; SAML later by adding a self-hosted **SAML Jackson** service on Render when the first enterprise customer needs it. No per-tier gating; sessions and roles (operator, admin, future customer-portal user) are our own tables.
 - **AI layer:** Claude API.
-  - *Extraction:* the PDF is sent to Claude with a strict JSON schema (structured output) for the report fields and parameter rows; per-field confidence + source-page reference; low-confidence fields are flagged in the *Dati estratti* panel for human confirmation.
+  - *Extraction:* the PDF is sent to Claude with a strict JSON schema (structured output) for the report fields and parameter rows — including the lab's own claimed limits/conclusions, which are stored but never trusted (see §2); per-field confidence + source-page reference; low-confidence fields are flagged in the *Dati estratti* panel for human confirmation.
   - *Chat:* Claude with **tool use** — its tools are `run_comparison(analysis_id, limit_table_id)`, `search_normativa(query)`, `get_plant_config()`, etc. So when the user asks "verifica contro Tabella 5 colonna B", the model calls the deterministic engine and formats the result; it never invents numbers.
-- **Rules engine:** pure TypeScript library, unit-tested against hand-verified fixtures. Handles: unit normalization (mg/kg s.s., mg/l, µg/kg…), `<` (below-LOQ) semantics — a result of `< 10` vs. a limit of `10` is conforme, LOQ above the limit is *non determinato* — missing mandatory parameters, and sum-rules (e.g. sommatoria IPA, PCB).
+- **Rules engine:** pure TypeScript library, unit-tested against hand-verified fixtures (the fac-simile in `docs/context/` is fixture #1). Handles: unit normalization (mg/kg s.s., mg/l, µg/kg…), Italian number format (decimal comma), `<` (below-LOQ) semantics — a result of `< 10` vs. a limit of `10` is conforme, LOQ above the limit is *non determinato* — range limits (e.g. pH 5,5–12,0), total-vs-eluate basis separation, missing mandatory parameters, sum-rules (e.g. sommatoria IPA, PCB), and the POP blocking layer.
 - **Normativa RAG:** norm texts chunked into pgvector; chat citations always point to the stored source passage.
 
 ### Core data model
@@ -119,7 +130,7 @@ audit_log (append-only: every edit to extracted data, every verdict)
 ## 5. Delivery plan
 
 **Phase 1 — MVP (the screenshot, end-to-end):**
-auth + org setup · document upload → extraction → editable *Dati estratti* · rules engine + 2–3 seeded limit tables (the ones the plant actually uses, validated with the customer) · comparison UI with per-parameter esito and conclusion · chat over the active document · verification history. *Acceptance test: the `17 09 03*` sample report from the mock-up reproduces the exact verdict (18 conformi / 2 non conformi — Mercurio, Zinco / 3 non determinati).*
+auth + org setup · document upload → extraction → editable *Dati estratti* · rules engine + 2–3 seeded limit tables (the ones the plant actually uses, validated with the customer) · comparison UI with per-parameter esito and conclusion · chat over the active document · verification history. *Acceptance tests: (a) the `17 09 03*` sample report from the mock-up reproduces the exact verdict (18 conformi / 2 non conformi — Mercurio, Zinco / 3 non determinati); (b) the fac-simile `17 05 04` report in `docs/context/` reproduces a full pass against the inert-landfill eluate criteria, with the lab's claimed limits ignored in favor of our own tables.*
 
 **Phase 2 — plant operations:**
 Impianti e linee configuration UI · line suggestion ("quale linea può accettarlo?") · omologa lifecycle with expiries · PDF export of the esito di conformità · Normativa RAG + Storico richieste.
@@ -133,7 +144,7 @@ Each phase ships deployable; Phase 1 is the review gate for the whole design.
 
 ## 6. Open questions for the owner
 
-1. **Gemini context** — please export/paste the two Gemini conversations (links are blocked from this environment) so their requirements can be folded in.
+1. ~~**Gemini context**~~ — ✅ received; both conversations are preserved in `docs/context/` and folded into §2 (normative catalog, POP layer, authorization regimes) and §4/§5 (extraction schema, fixtures, `<`-semantics).
 2. **Which limit tables and lines** does the plant actually operate with (AIA authorization extract would be ideal)? These become the Phase-1 seed data.
 3. **Users & tenancy** — single plant or multiple sites? Do customers (producers) get logins in Phase 1 or only internal staff?
 4. **Report formats** — a sample set of real lab reports (the 3–5 labs most customers use) is needed to tune extraction before go-live.
