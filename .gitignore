@@ -1,6 +1,12 @@
 node_modules/
 .next/
 .data/
+
+# Local secrets: ANTHROPIC_API_KEY, AUTH_SECRET. Never commit these.
+.env
+.env.local
+.env.*.local
+
 *.tsbuildinfo
 next-env.d.ts
 __pycache__/
