@@ -44,3 +44,27 @@ npm run dev     # http://localhost:3000
 
 In the chat, click **“Prova con il campione demo (17 09 03*)”** to reproduce the
 mock-up conversation, or drag one of the PDFs from `seed/reports/pdf/` into the chat.
+
+### Deploy on Render
+
+The repo ships a [Render Blueprint](https://render.com/docs/infrastructure-as-code)
+(`render.yaml`) that deploys the app as a single Node web service:
+
+1. Push this repository to GitHub (or fork it).
+2. In the [Render dashboard](https://dashboard.render.com), choose
+   **New → Blueprint** and select the repository. Render reads `render.yaml`
+   and provisions the `valli-spa-ai` web service (Starter plan, Node 22).
+3. Approve the plan — the first deploy runs `npm ci && npm run build` and then
+   `npm run start` (Next.js binds to Render's `PORT` automatically).
+
+Notes:
+
+- **Persistence:** uploaded documents and the JSON store live in `DATA_DIR`,
+  a 5 GB persistent disk mounted at `/var/data`, so they survive deploys.
+  Disks require a paid instance type; to trial on the **free** tier, delete
+  the `disk` block and the `DATA_DIR` env var from `render.yaml` (data then
+  resets on every deploy).
+- **Auto-deploy** is enabled: every push to the connected branch redeploys.
+- **Phase 1.1:** when real Claude extraction lands, uncomment the
+  `ANTHROPIC_API_KEY` entry in `render.yaml` and set the key in the Render
+  dashboard (it is marked `sync: false`, so the value never lives in the repo).
