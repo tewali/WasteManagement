@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { getSeed } from "@/lib/seed";
 import { newId, store } from "@/lib/store";
 import type { ChatMessage, Conversation } from "@/lib/types";
@@ -8,6 +9,10 @@ import type { ChatMessage, Conversation } from "@/lib/types";
 //         document (producer + CER + waste type) when possible.
 
 export async function GET() {
+  if (!(await auth())?.user) {
+    return NextResponse.json({ error: "non autenticato" }, { status: 401 });
+  }
+
   const list = store.get().conversations.map((c) => ({
     id: c.id,
     title: c.title,
@@ -39,6 +44,10 @@ function autoTitle(activeDocumentId: string | null, messages: ChatMessage[]): st
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await auth())?.user) {
+    return NextResponse.json({ error: "non autenticato" }, { status: 401 });
+  }
+
   const body = (await req.json()) as Partial<Conversation> & { messages: ChatMessage[] };
   const existing = body.id ? store.conversation(body.id) : null;
   const conversation: Conversation = {

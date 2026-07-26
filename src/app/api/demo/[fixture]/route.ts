@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { getSeed } from "@/lib/seed";
 import { newId, store } from "@/lib/store";
 import type { AnalysisRecord, DocumentRecord } from "@/lib/types";
@@ -8,6 +9,10 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ fixture: string }> },
 ) {
+  if (!(await auth())?.user) {
+    return NextResponse.json({ error: "non autenticato" }, { status: 401 });
+  }
+
   const { fixture } = await params;
   const report = getSeed().reports.find((r) => r.id === fixture);
   if (!report) return NextResponse.json({ error: "fixture sconosciuta" }, { status: 404 });

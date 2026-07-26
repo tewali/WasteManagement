@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { store } from "@/lib/store";
 import type { ReportHeader, ReportParameter } from "@/lib/types";
 
@@ -7,6 +8,10 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!(await auth())?.user) {
+    return NextResponse.json({ error: "non autenticato" }, { status: 401 });
+  }
+
   const { id } = await params;
   const body = (await req.json()) as {
     header?: Partial<ReportHeader>;

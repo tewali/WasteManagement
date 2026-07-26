@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { aiEnabled, annaChat } from "@/lib/ai";
 import { annaRespond } from "@/lib/anna";
 import { newId, store } from "@/lib/store";
@@ -9,6 +10,8 @@ import type { VerificationRecord } from "@/lib/types";
 // deterministic rules engine. Without a key, the deterministic intent
 // parser answers so the demo keeps working offline.
 export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: "non autenticato" }, { status: 401 });
   const body = (await req.json()) as {
     message: string;
     history?: { role: "user" | "assistant"; text: string }[];
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest) {
       analysis_id: analysis.id,
       document_id: document.id,
       created_at: new Date().toISOString(),
-      requested_by: "Aurora Parolini",
+      requested_by: session.user.name ?? "Operatore",
     };
     store.addVerification(record);
   }

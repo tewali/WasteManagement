@@ -8,6 +8,15 @@ const browser = await chromium.launch({
 const page = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
 await page.goto("http://localhost:3000", { waitUntil: "networkidle" });
 
+// Login wall: authenticate with the demo account if redirected.
+if (page.url().includes("/login")) {
+  await page.fill('input[type="email"]', "a.parolini@vallispa.example");
+  await page.fill('input[type="password"]', "valli-demo");
+  await page.click('button[type="submit"]');
+  await page.waitForURL((u) => !u.pathname.includes("/login"), { timeout: 15000 });
+  await page.waitForLoadState("networkidle");
+}
+
 if (process.env.DEMO === "1") {
   await page.click("text=Prova con il campione demo");
   // wait for Anna's structured reply + panel

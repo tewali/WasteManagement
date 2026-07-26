@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 /** True once the image at `src` has actually loaded (avoids broken-image flashes pre-hydration). */
@@ -91,6 +92,14 @@ export default function Sidebar() {
 function UserFooter() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { data: session } = useSession();
+  const name = session?.user?.name ?? "Utente";
+  const initials = name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
   useEffect(() => {
     if (!open) return;
@@ -113,11 +122,7 @@ function UserFooter() {
             Profilo utente
           </Link>
           <button
-            onClick={() => {
-              // Demo logout: clear local UI state and return to the chat.
-              localStorage.clear();
-              window.location.href = "/";
-            }}
+            onClick={() => void signOut({ callbackUrl: "/login" })}
             className="block w-full border-t border-white/10 px-4 py-3 text-left text-[13px] font-medium text-red-300 hover:bg-forest-700 hover:text-red-200"
           >
             Esci
@@ -130,10 +135,10 @@ function UserFooter() {
         title="Profilo e opzioni account"
       >
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-forest-600 text-[12px] font-bold text-white ring-1 ring-white/20">
-          AP
+          {initials}
         </span>
-        <span className="flex-1">
-          <span className="block text-[13.5px] font-semibold">Aurora Parolini</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13.5px] font-semibold">{name}</span>
           <span className="block text-[12px] text-emerald-100/60">Valli S.p.A.</span>
         </span>
         <IconChevronD

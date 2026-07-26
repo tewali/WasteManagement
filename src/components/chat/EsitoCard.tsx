@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { MessageBlock, ParamVerdict, VerificationResult } from "@/lib/types";
 
 const ESITO_STYLE: Record<string, { pill: string; label: string }> = {
@@ -122,9 +124,9 @@ export default function MessageBlocks({ blocks }: { blocks: MessageBlock[] }) {
       {blocks.map((b, i) => {
         if (b.type === "text") {
           return (
-            <p key={i} className="text-[13.5px] leading-relaxed text-slate-700">
-              {b.text}
-            </p>
+            <div key={i} className="chat-md text-[13.5px] leading-relaxed text-slate-700">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{b.text}</ReactMarkdown>
+            </div>
           );
         }
         if (b.type === "inquadramento") {

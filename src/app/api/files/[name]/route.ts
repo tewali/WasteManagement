@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import fs from "fs";
 import path from "path";
 import { UPLOAD_DIR } from "@/lib/store";
@@ -7,6 +8,10 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ name: string }> },
 ) {
+  if (!(await auth())?.user) {
+    return NextResponse.json({ error: "non autenticato" }, { status: 401 });
+  }
+
   const { name } = await params;
   const safe = path.basename(decodeURIComponent(name));
   const file = path.join(UPLOAD_DIR, safe);

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { store } from "@/lib/store";
 
 // Notification feed: derived from app activity (verifications + uploads),
 // newest first. The client tracks "seen" state locally.
 export async function GET() {
+  if (!(await auth())?.user) {
+    return NextResponse.json({ error: "non autenticato" }, { status: 401 });
+  }
+
   const { verifications, documents } = store.get();
   const items = [
     ...verifications.map((v) => ({

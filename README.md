@@ -41,12 +41,18 @@ Persistence and file storage live in `DATA_DIR` (default `.data/`; on Render, th
 persistent disk mounted at `/var/data` — see `render.yaml`). Database records move
 to Render Postgres in Phase 2; uploaded documents stay on the disk.
 
+**Authentication:** Auth.js (next-auth v5) with email/password credentials —
+register at `/register`, login at `/login`; all pages and APIs require a session.
+A demo account is created on first run: `a.parolini@vallispa.example` /
+`valli-demo`. Set `AUTH_SECRET` in production (render.yaml generates one).
+OIDC/SSO providers slot into `src/auth.ts` in Phase 2.
+
 ### Run
 
 ```bash
 npm install
 npm test        # rules engine vs fixture verdicts
-npm run dev     # http://localhost:3000
+npm run dev     # http://localhost:3000  (login with the demo account above)
 ```
 
 In the chat, click **“Prova con il campione demo (17 09 03*)”** to reproduce the

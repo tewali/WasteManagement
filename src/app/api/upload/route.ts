@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import fs from "fs";
 import path from "path";
 import { aiEnabled, extractFromPdf } from "@/lib/ai";
@@ -18,6 +19,10 @@ const FIXTURE_PATTERNS: [RegExp, string][] = [
 ];
 
 export async function POST(req: NextRequest) {
+  if (!(await auth())?.user) {
+    return NextResponse.json({ error: "non autenticato" }, { status: 401 });
+  }
+
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) {
