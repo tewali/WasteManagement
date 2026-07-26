@@ -12,6 +12,7 @@
       "sampled_by": "Laboratorio",
       "eer_declared": "19 12 12",
       "waste_description": "Altri rifiuti (compresi materiali misti) prodotti dal trattamento meccanico dei rifiuti, diversi da quelli di cui alla voce 19 12 11",
+      "sample_type": "Sovvalli da trattamento meccanico",
       "physical_state": "Solido eterogeneo",
       "leaching_test": "UNI EN 12457-2, L/S = 10 l/kg"
     },
@@ -50,7 +51,10 @@
       {
         "limit_table_id": "eluato-discarica-non-pericolosi",
         "line_id": "L2-inertizzazione",
-        "counts": { "conforme": 14, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 0 },
+        "counts": { "conforme": 13, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 1 },
+        "non_applicabili": [
+          { "analyte_key": "ph_eluato", "reason": "Nessun limite pH nella tabella non pericolosi — valore informativo" }
+        ],
         "overall": "conforme"
       }
     ],

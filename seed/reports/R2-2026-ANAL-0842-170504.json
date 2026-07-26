@@ -13,6 +13,7 @@
       "sampled_by": "Cliente / Tecnico Abilitato",
       "eer_declared": "17 05 04",
       "waste_description": "Terre e rocce, diverse da quelle di cui alla voce 17 05 03 — terreno da scavo",
+      "sample_type": "Terreno da scavo",
       "physical_state": "Solido non polverulento",
       "lab_claimed_conclusion": "Rifiuto NON PERICOLOSO EER 17 05 04; eluato entro i limiti D.M. 27/09/2010 per discarica rifiuti inerti (citazione normativa superata — mappata su D.Lgs. 121/2020)",
       "leaching_test": "UNI EN 12457-2, L/S = 10 l/kg"
@@ -65,7 +66,8 @@
       {
         "limit_table_id": "pop-reg-2019-1021",
         "line_id": "L2-inertizzazione",
-        "counts": { "conforme": 3, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 0 },
+        "counts": { "conforme": 4, "non_conforme": 0, "non_determinato": 0, "non_applicabile": 6 },
+        "note": "Conformi: PCDD/PCDF, PFAS somma, pesticidi organoclorurati, PCB (soglia POP). Non applicabili: parametri tal quale privi di voce nella tabella POP (sostanza secca, pH, idrocarburi, benzene, IPA).",
         "overall": "conforme"
       }
     ],
