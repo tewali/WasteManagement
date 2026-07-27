@@ -543,11 +543,10 @@ export async function annaChat(opts: {
     // gives one column per norm. A single comparison keeps the plain esito card.
     const multi = { verifications: ordered, skipped: plantCheck?.skipped ?? [] };
     if (plantCheck || ordered.length > 1) {
-      blocks.push({ type: "quadro", quadro: buildQuadro(multi) });
       blocks.push({
-        type: "matrice",
+        type: "quadro",
+        quadro: buildQuadro(multi),
         matrice: buildMatrice(multi),
-        document_name: opts.document?.filename ?? "",
       });
     } else {
       blocks.push(

@@ -178,7 +178,7 @@ export default function MessageBlocks({
           );
         }
         if (b.type === "quadro") {
-          return <QuadroBlock key={i} quadro={b.quadro} />;
+          return <QuadroBlock key={i} quadro={b.quadro} matrice={b.matrice} />;
         }
         if (b.type === "matrice") {
           return <MatriceBlock key={i} matrice={b.matrice} />;

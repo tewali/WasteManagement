@@ -216,13 +216,11 @@ export function annaRespond(opts: {
             `(${names.length}: ${names.join("; ")}).`,
         },
         inquadramento(analysis, lineId, `${names.length} tabelle attive — ${names.join("; ")}`),
-        // Aggregated stoplight first, then the parameter × norm matrix. The
-        // per-table esito cards would now repeat the matrix column by column.
-        { type: "quadro" as const, quadro: buildQuadro(check) },
+        // Stoplight summary; the per-norm matrix opens from it on demand.
         {
-          type: "matrice" as const,
+          type: "quadro" as const,
+          quadro: buildQuadro(check),
           matrice: buildMatrice(check),
-          document_name: document.filename,
         },
         conclusioneMulti(check, lineId),
       ];

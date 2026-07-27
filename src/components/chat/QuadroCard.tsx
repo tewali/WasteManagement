@@ -11,7 +11,15 @@
 // 2px surface gaps rather than strokes.
 
 import { Fragment, useState } from "react";
-import type { Esito, ParamVerdict, QuadroData, QuadroRow, QuadroStatus } from "@/lib/types";
+import MatriceBlock from "./MatriceCard";
+import type {
+  Esito,
+  MatriceData,
+  ParamVerdict,
+  QuadroData,
+  QuadroRow,
+  QuadroStatus,
+} from "@/lib/types";
 
 const STATUS: Record<QuadroStatus, { color: string; icon: string; label: string; chip: string }> = {
   conforme: { color: "#0ca30c", icon: "●", label: "Conforme", chip: "bg-brand-pale text-brand-dark" },
@@ -143,8 +151,15 @@ function VerdictDetail({ row }: { row: QuadroRow }) {
   );
 }
 
-export default function QuadroBlock({ quadro }: { quadro: QuadroData }) {
+export default function QuadroBlock({
+  quadro,
+  matrice,
+}: {
+  quadro: QuadroData;
+  matrice?: MatriceData;
+}) {
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  const [showMatrice, setShowMatrice] = useState(false);
   const s = STATUS[quadro.overall];
   return (
     <div>
@@ -232,6 +247,30 @@ export default function QuadroBlock({ quadro }: { quadro: QuadroData }) {
           </tbody>
         </table>
       </div>
+
+      {/* The whole comparison, opened from the chart rather than shipped
+          alongside it: the summary stays short until the detail is wanted. */}
+      {matrice && (
+        <div className="mt-1">
+          <button
+            onClick={() => setShowMatrice(!showMatrice)}
+            aria-expanded={showMatrice}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 py-1.5 text-[12px] font-semibold text-brand-dark hover:bg-brand-mist"
+          >
+            <span aria-hidden className={`transition-transform ${showMatrice ? "rotate-90" : ""}`}>
+              ▶
+            </span>
+            {showMatrice
+              ? "Nascondi il confronto per norma"
+              : `Confronto per norma — ${matrice.rows.length} parametri × ${matrice.norms.length} norme`}
+          </button>
+          {showMatrice && (
+            <div className="mt-3">
+              <MatriceBlock matrice={matrice} hideHeading />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Legend: identity is never colour-alone. */}
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-500">

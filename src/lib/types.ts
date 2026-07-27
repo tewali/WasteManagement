@@ -298,7 +298,10 @@ export interface MatriceData {
 export type MessageBlock =
   | { type: "text"; text: string }
   | { type: "inquadramento"; items: { label: string; value: string }[] }
-  | { type: "quadro"; quadro: QuadroData }
+  /** `matrice` is the per-norm comparison revealed by expanding the chart. */
+  | { type: "quadro"; quadro: QuadroData; matrice?: MatriceData }
+  /** Standalone matrix — still rendered for conversations saved before it moved
+   *  inside the quadro. */
   | { type: "matrice"; matrice: MatriceData; document_name: string }
   /**
    * A request that could not reach the API. Transient UI only — never persisted

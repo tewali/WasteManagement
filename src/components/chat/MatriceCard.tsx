@@ -20,7 +20,14 @@ const CELL: Record<Esito, { bg: string; text: string; icon: string; label: strin
 
 const ROWS_COLLAPSED = 10;
 
-export default function MatriceBlock({ matrice }: { matrice: MatriceData }) {
+export default function MatriceBlock({
+  matrice,
+  hideHeading,
+}: {
+  matrice: MatriceData;
+  /** Set when nested under the quadro, which already labels the section. */
+  hideHeading?: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const rows = expanded ? matrice.rows : matrice.rows.slice(0, ROWS_COLLAPSED);
   const hasMore = matrice.rows.length > ROWS_COLLAPSED;
@@ -28,9 +35,11 @@ export default function MatriceBlock({ matrice }: { matrice: MatriceData }) {
 
   return (
     <div>
-      <div className="mb-2 flex items-center gap-2 text-[13px] font-bold tracking-wide text-slate-800">
-        <span aria-hidden>📋</span> CONFRONTO PER NORMA
-      </div>
+      {!hideHeading && (
+        <div className="mb-2 flex items-center gap-2 text-[13px] font-bold tracking-wide text-slate-800">
+          <span aria-hidden>📋</span> CONFRONTO PER NORMA
+        </div>
+      )}
 
       {/* Stated before the table, so an unperformed check is never missed
           because its column sits off the right edge. */}
