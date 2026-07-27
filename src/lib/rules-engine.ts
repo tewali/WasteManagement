@@ -26,7 +26,7 @@ import type {
 const fmtIt = (n: number) =>
   n.toLocaleString("it-IT", { maximumFractionDigits: 6 });
 
-function limitDisplay(entry: LimitEntry, tableUnit: string): string {
+export function limitDisplay(entry: LimitEntry, tableUnit: string): string {
   if (entry.kind === "range" && entry.min != null && entry.max != null) {
     return `${fmtIt(entry.min)} – ${fmtIt(entry.max)}`;
   }
