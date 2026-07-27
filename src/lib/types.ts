@@ -254,10 +254,52 @@ export interface QuadroData {
   skipped: { table_name: string; reason: string }[];
 }
 
+// ---- matrice per norma (one column per piece of legislation) -------------
+
+export interface MatriceNorm {
+  limit_table_id: string;
+  /** Column head, e.g. "Tab. 5 — Col. A". */
+  short_label: string;
+  name: string;
+  normativa: string;
+  basis: Basis;
+  unit: string;
+  blocking: boolean;
+  /** False when the report cannot address this norm at all. */
+  applicable: boolean;
+  /** Why it does not apply — shown under the column and in the footnote. */
+  reason?: string;
+  status: QuadroStatus | null;
+}
+
+export interface MatriceCell {
+  /** null when the norm is not applicable to this report. */
+  esito: Esito | null;
+  /** null when this norm sets no limit for the parameter. */
+  limit_display: string | null;
+}
+
+export interface MatriceRow {
+  analyte_key: string;
+  label: string;
+  result_raw: string;
+  unit: string;
+  /** Aligned with `MatriceData.norms`, same order. */
+  cells: MatriceCell[];
+  /** Worst verdict across the applicable norms, for ordering. */
+  worst: Esito;
+}
+
+export interface MatriceData {
+  norms: MatriceNorm[];
+  rows: MatriceRow[];
+}
+
 export type MessageBlock =
   | { type: "text"; text: string }
   | { type: "inquadramento"; items: { label: string; value: string }[] }
   | { type: "quadro"; quadro: QuadroData }
+  | { type: "matrice"; matrice: MatriceData; document_name: string }
   /**
    * A request that could not reach the API. Transient UI only — never persisted
    * with the conversation; `retry_id` looks up the action that replays it.

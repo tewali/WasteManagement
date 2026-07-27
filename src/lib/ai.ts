@@ -17,6 +17,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { suggestLines } from "./line-suggest";
 import {
+  buildMatrice,
   buildQuadro,
   plantCheckLines,
   runPlantCheck,
@@ -538,21 +539,25 @@ export async function annaChat(opts: {
     const headline = ordered[0] ?? null;
 
     const blocks: MessageBlock[] = [];
-    // Aggregated stoplight whenever there is more than one regulation to weigh
-    // up, or the full plant battery ran — summary first, per-table detail after.
+    // More than one regulation in play: the stoplight summarises, the matrix
+    // gives one column per norm. A single comparison keeps the plain esito card.
+    const multi = { verifications: ordered, skipped: plantCheck?.skipped ?? [] };
     if (plantCheck || ordered.length > 1) {
+      blocks.push({ type: "quadro", quadro: buildQuadro(multi) });
       blocks.push({
-        type: "quadro",
-        quadro: buildQuadro({ verifications: ordered, skipped: plantCheck?.skipped ?? [] }),
-      });
-    }
-    blocks.push(
-      ...ordered.map((v) => ({
-        type: "esito" as const,
-        verification: v,
+        type: "matrice",
+        matrice: buildMatrice(multi),
         document_name: opts.document?.filename ?? "",
-      })),
-    );
+      });
+    } else {
+      blocks.push(
+        ...ordered.map((v) => ({
+          type: "esito" as const,
+          verification: v,
+          document_name: opts.document?.filename ?? "",
+        })),
+      );
+    }
     if (text) blocks.push({ type: "text", text });
     if (blocks.length === 0) blocks.push({ type: "text", text: "Non ho prodotto una risposta, riprovi." });
     return {

@@ -6,7 +6,13 @@
 // fallback keeps the demo fully functional offline.
 
 import { suggestLines } from "./line-suggest";
-import { buildQuadro, plantCheckLines, runPlantCheck, shortTableName } from "./plant-check";
+import {
+  buildMatrice,
+  buildQuadro,
+  plantCheckLines,
+  runPlantCheck,
+  shortTableName,
+} from "./plant-check";
 import { runVerification } from "./rules-engine";
 import { analyteLabel, defaultLineId, getSeed, getTable, standardTableId } from "./seed";
 import { store } from "./store";
@@ -210,26 +216,14 @@ export function annaRespond(opts: {
             `(${names.length}: ${names.join("; ")}).`,
         },
         inquadramento(analysis, lineId, `${names.length} tabelle attive — ${names.join("; ")}`),
-        // Aggregated stoplight first, per-table detail underneath.
+        // Aggregated stoplight first, then the parameter × norm matrix. The
+        // per-table esito cards would now repeat the matrix column by column.
         { type: "quadro" as const, quadro: buildQuadro(check) },
-        ...check.verifications.map((verification) => ({
-          type: "esito" as const,
-          verification,
+        {
+          type: "matrice" as const,
+          matrice: buildMatrice(check),
           document_name: document.filename,
-        })),
-        ...(check.skipped.length > 0
-          ? [
-              {
-                type: "text" as const,
-                text:
-                  `*Tabelle attive non valutabili con i parametri disponibili:* ` +
-                  check.skipped
-                    .map((s) => `${shortTableName(s.table.name)} — ${s.reason}`)
-                    .join("; ") +
-                  ".",
-              },
-            ]
-          : []),
+        },
         conclusioneMulti(check, lineId),
       ];
       return {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import MatriceBlock from "./MatriceCard";
 import QuadroBlock from "./QuadroCard";
 import type { MessageBlock, ParamVerdict, VerificationResult } from "@/lib/types";
 
@@ -178,6 +179,9 @@ export default function MessageBlocks({
         }
         if (b.type === "quadro") {
           return <QuadroBlock key={i} quadro={b.quadro} />;
+        }
+        if (b.type === "matrice") {
+          return <MatriceBlock key={i} matrice={b.matrice} />;
         }
         if (b.type === "errore") {
           const retriable = onRetry && (canRetry?.(b.retry_id) ?? true);

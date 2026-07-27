@@ -1,6 +1,12 @@
 // The upload battery: every limit table active in the plant, in one pass.
 import { describe, expect, it } from "vitest";
-import { activeLimitTables, buildQuadro, isTableInForce, runPlantCheck } from "@/lib/plant-check";
+import {
+  activeLimitTables,
+  buildMatrice,
+  buildQuadro,
+  isTableInForce,
+  runPlantCheck,
+} from "@/lib/plant-check";
 import { getSeed, getTable, isBlockingTable, standardTableId } from "@/lib/seed";
 import type { ReportParameter } from "@/lib/types";
 
@@ -188,5 +194,59 @@ describe("quadro row detail", () => {
         }
       }
     }
+  });
+});
+
+describe("buildMatrice — one column per norm", () => {
+  const matrice = (id: string) => buildMatrice(runPlantCheck(params(id), lines, "L1-soil-washing"));
+
+  it("keeps a column for every active norm, applicable or not", () => {
+    const m = matrice("R1");
+    expect(m.norms).toHaveLength(activeLimitTables(lines, "L1-soil-washing").length);
+
+    const applicable = m.norms.filter((n) => n.applicable).map((n) => n.limit_table_id);
+    const not = m.norms.filter((n) => !n.applicable);
+    expect(applicable).toEqual(["tab5-121-2020-colA", "tab5-121-2020-colB", "pop-reg-2019-1021"]);
+    expect(not.map((n) => n.limit_table_id).sort()).toEqual([
+      "eluato-discarica-inerti",
+      "eluato-discarica-non-pericolosi",
+    ]);
+    // An unperformed check must say why, never look like a pass.
+    for (const n of not) {
+      expect(n.reason).toMatch(/eluato/);
+      expect(n.status).toBeNull();
+    }
+  });
+
+  it("aligns every row's cells with the norm columns", () => {
+    for (const id of ["R1", "R2", "R3", "R4"]) {
+      const m = matrice(id);
+      for (const r of m.rows) expect(r.cells).toHaveLength(m.norms.length);
+    }
+  });
+
+  it("blanks the cells of a non-applicable norm", () => {
+    const m = matrice("R1");
+    m.norms.forEach((n, i) => {
+      if (n.applicable) return;
+      for (const r of m.rows) expect(r.cells[i]).toEqual({ esito: null, limit_display: null });
+    });
+  });
+
+  it("reads a parameter across the norms, worst rows first", () => {
+    const m = matrice("R1");
+    const colA = m.norms.findIndex((n) => n.limit_table_id === "tab5-121-2020-colA");
+    const colB = m.norms.findIndex((n) => n.limit_table_id === "tab5-121-2020-colB");
+
+    // Mercurio: over col. A, within the wider col. B — the point of the matrix.
+    const hg = m.rows.find((r) => r.label.startsWith("Mercurio"))!;
+    expect(hg.cells[colA]).toEqual({ esito: "non_conforme", limit_display: "1" });
+    expect(hg.cells[colB].esito).toBe("conforme");
+    expect(hg.worst).toBe("non_conforme");
+    expect(m.rows[0].worst).toBe("non_conforme");
+
+    // A parameter no norm covers shows as "not foreseen", not as compliant.
+    const pop = m.norms.findIndex((n) => n.limit_table_id === "pop-reg-2019-1021");
+    expect(hg.cells[pop]).toEqual({ esito: null, limit_display: null });
   });
 });

@@ -13,6 +13,9 @@ import { analyteLabel, getTable, standardTableId } from "./seed";
 import type {
   Esito,
   LimitTable,
+  MatriceData,
+  MatriceNorm,
+  MatriceRow,
   ParamVerdict,
   PlantLine,
   QuadroData,
@@ -178,6 +181,81 @@ export function buildQuadro(check: PlantCheck): QuadroData {
       reason: s.reason,
     })),
   };
+}
+
+/** Compact column head for a norm — the full name lives in the legend. */
+export function shortNormLabel(table: { id: string; name: string }): string {
+  if (table.id.endsWith("colA")) return "Tab. 5 — Col. A";
+  if (table.id.endsWith("colB")) return "Tab. 5 — Col. B";
+  if (table.id.includes("inerti")) return "Disc. inerti";
+  if (table.id.includes("non-pericolosi")) return "Disc. non peric.";
+  if (table.id.startsWith("pop")) return "Vincolo POP";
+  return shortTableName(table.name);
+}
+
+/**
+ * One column per piece of legislation, one row per measured parameter.
+ * Norms the report cannot address keep their column — marked non applicabile
+ * with the reason — so a missing check is visible rather than absent.
+ */
+export function buildMatrice(check: PlantCheck): MatriceData {
+  const norms: MatriceNorm[] = [
+    ...check.verifications.map((v) => ({
+      limit_table_id: v.limit_table_id,
+      short_label: shortNormLabel({ id: v.limit_table_id, name: v.limit_table_name }),
+      name: shortTableName(v.limit_table_name),
+      normativa: v.normativa.split("(")[0].trim(),
+      basis: v.basis,
+      unit: getTable(v.limit_table_id)?.unit ?? "",
+      blocking: Boolean(getTable(v.limit_table_id)?.blocking),
+      applicable: true,
+      status: rowStatus(v),
+    })),
+    ...check.skipped.map((s) => ({
+      limit_table_id: s.table.id,
+      short_label: shortNormLabel(s.table),
+      name: shortTableName(s.table.name),
+      normativa: s.table.normativa.split("(")[0].trim(),
+      basis: s.table.basis,
+      unit: s.table.unit,
+      blocking: Boolean(s.table.blocking),
+      applicable: false,
+      reason: s.reason,
+      status: null,
+    })),
+  ];
+
+  // Every measured parameter, looked up in each applicable norm.
+  const byTable = new Map(
+    check.verifications.map((v) => [
+      v.limit_table_id,
+      new Map(v.verdicts.map((x) => [x.analyte_key, x])),
+    ]),
+  );
+  const template = check.verifications[0]?.verdicts ?? [];
+
+  const rows: MatriceRow[] = template.map((p) => {
+    const cells = norms.map((n) => {
+      if (!n.applicable) return { esito: null, limit_display: null };
+      const v = byTable.get(n.limit_table_id)?.get(p.analyte_key);
+      if (!v || v.esito === "non_applicabile") return { esito: null, limit_display: null };
+      return { esito: v.esito, limit_display: v.limit_display };
+    });
+    const esiti = cells.map((c) => c.esito).filter(Boolean) as Esito[];
+    const worst =
+      esiti.sort((a, b) => VERDICT_ORDER[a] - VERDICT_ORDER[b])[0] ?? ("non_applicabile" as Esito);
+    return {
+      analyte_key: p.analyte_key,
+      label: p.label,
+      result_raw: p.result_raw,
+      unit: p.unit,
+      cells,
+      worst,
+    };
+  });
+
+  rows.sort((a, b) => VERDICT_ORDER[a.worst] - VERDICT_ORDER[b.worst]);
+  return { norms, rows };
 }
 
 /** One-line-per-table recap used by the conclusione block. */
