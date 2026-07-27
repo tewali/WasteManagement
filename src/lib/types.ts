@@ -240,6 +240,11 @@ export interface QuadroRow {
   evaluated_total: number;
   /** Parameters that put the table in the red, for the row's caption. */
   offenders: string[];
+  /**
+   * Per-parameter detail behind the row, non-conformi first. Excludes the
+   * parameters this table does not govern.
+   */
+  verdicts: ParamVerdict[];
 }
 
 export interface QuadroData {

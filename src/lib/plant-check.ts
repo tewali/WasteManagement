@@ -11,7 +11,9 @@
 import { runVerification } from "./rules-engine";
 import { analyteLabel, getTable, standardTableId } from "./seed";
 import type {
+  Esito,
   LimitTable,
+  ParamVerdict,
   PlantLine,
   QuadroData,
   QuadroRow,
@@ -113,8 +115,24 @@ function rowStatus(v: VerificationResult): QuadroStatus {
  * table plus the overall verdict. A blocking exceedance dominates everything;
  * otherwise the plant is only fully green when every table is clean.
  */
+/** Worst first: what fails is what the operator needs to see without scrolling. */
+const VERDICT_ORDER: Record<Esito, number> = {
+  non_conforme: 0,
+  non_determinato: 1,
+  conforme: 2,
+  non_applicabile: 3,
+};
+
+function detailVerdicts(v: VerificationResult): ParamVerdict[] {
+  return v.verdicts
+    .filter((x) => x.esito !== "non_applicabile")
+    .slice()
+    .sort((a, b) => VERDICT_ORDER[a.esito] - VERDICT_ORDER[b.esito]);
+}
+
 export function buildQuadro(check: PlantCheck): QuadroData {
   const rows: QuadroRow[] = check.verifications.map((v) => ({
+    verdicts: detailVerdicts(v),
     limit_table_id: v.limit_table_id,
     table_name: shortTableName(v.limit_table_name),
     normativa: v.normativa.split("(")[0].trim(),

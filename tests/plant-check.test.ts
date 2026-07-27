@@ -157,3 +157,36 @@ describe("buildQuadro — stoplight logic", () => {
     }
   });
 });
+
+describe("quadro row detail", () => {
+  const quadro = (id: string) =>
+    buildQuadro(runPlantCheck(params(id), lines, "L1-soil-washing"));
+
+  it("carries every governed parameter, worst first", () => {
+    const colA = quadro("R1").rows.find((r) => r.limit_table_id === "tab5-121-2020-colA")!;
+
+    // Offenders lead, then undetermined, then compliant — nothing hidden below.
+    const order = colA.verdicts.map((v) => v.esito);
+    const rank = { non_conforme: 0, non_determinato: 1, conforme: 2, non_applicabile: 3 };
+    expect(order.map((e) => rank[e])).toEqual([...order.map((e) => rank[e])].sort((a, b) => a - b));
+    expect(order.slice(0, 2)).toEqual(["non_conforme", "non_conforme"]);
+    expect(colA.verdicts.slice(0, 2).map((v) => v.label.replace(/\s*\(.*\)$/, ""))).toEqual([
+      "Mercurio",
+      "Zinco",
+    ]);
+  });
+
+  it("omits parameters the table does not govern, and counts what it shows", () => {
+    for (const id of ["R1", "R2", "R3", "R4"]) {
+      for (const row of quadro(id).rows) {
+        expect(row.verdicts.some((v) => v.esito === "non_applicabile")).toBe(false);
+        expect(row.verdicts).toHaveLength(row.evaluated_total);
+        // Every flagged parameter names a limit the reader can check against.
+        for (const v of row.verdicts.filter((x) => x.esito === "non_conforme")) {
+          expect(v.limit_display).toBeTruthy();
+          expect(v.result_raw).toBeTruthy();
+        }
+      }
+    }
+  });
+});

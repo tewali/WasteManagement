@@ -10,7 +10,8 @@
 // The composition bar is a 100% stack of the same three states, separated by
 // 2px surface gaps rather than strokes.
 
-import type { QuadroData, QuadroRow, QuadroStatus } from "@/lib/types";
+import { Fragment, useState } from "react";
+import type { Esito, ParamVerdict, QuadroData, QuadroRow, QuadroStatus } from "@/lib/types";
 
 const STATUS: Record<QuadroStatus, { color: string; icon: string; label: string; chip: string }> = {
   conforme: { color: "#0ca30c", icon: "●", label: "Conforme", chip: "bg-brand-pale text-brand-dark" },
@@ -72,7 +73,78 @@ function CompositionBar({ row }: { row: QuadroRow }) {
   );
 }
 
+const VERDICT_STYLE: Record<Esito, { pill: string; label: string; icon: string }> = {
+  conforme: { pill: "bg-brand-pale text-brand-dark", label: "Conforme", icon: "●" },
+  non_conforme: { pill: "bg-red-100 text-red-700", label: "Non conforme", icon: "⚑" },
+  non_determinato: { pill: "bg-amber-100 text-amber-800", label: "Non determinato", icon: "▲" },
+  non_applicabile: { pill: "bg-slate-200 text-slate-600", label: "Non applicabile", icon: "–" },
+};
+
+/** Every governed parameter of one table, worst first, offenders flagged. */
+function VerdictDetail({ row }: { row: QuadroRow }) {
+  const offenders = row.verdicts.filter((v) => v.esito === "non_conforme").length;
+  return (
+    <div className="bg-slate-50/70 px-3 pb-3 pt-2">
+      {offenders > 0 && (
+        <p className="mb-2 text-[11.5px] font-semibold text-red-700">
+          ⚑ {offenders} parametr{offenders === 1 ? "o" : "i"} fuori limite su {row.evaluated_total}{" "}
+          valutati.
+        </p>
+      )}
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <table className="w-full text-[12px]">
+          <thead>
+            <tr className="bg-slate-50 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">
+              <th className="px-3 py-1.5">Parametro</th>
+              <th className="whitespace-nowrap px-3 py-1.5 text-right">Risultato</th>
+              <th className="whitespace-nowrap px-2 py-1.5">U.M.</th>
+              <th className="whitespace-nowrap px-3 py-1.5 text-right">Limite</th>
+              <th className="px-3 py-1.5 text-center">Esito</th>
+            </tr>
+          </thead>
+          <tbody>
+            {row.verdicts.map((v: ParamVerdict) => {
+              const bad = v.esito === "non_conforme";
+              const st = VERDICT_STYLE[v.esito];
+              return (
+                <tr
+                  key={v.analyte_key}
+                  title={v.reason}
+                  className={`border-t border-slate-100 ${bad ? "bg-red-50 text-red-700" : "text-slate-700"}`}
+                >
+                  <td className="px-3 py-1.5 font-medium">
+                    {/* The flag repeats the state as a glyph: never colour alone. */}
+                    {bad && (
+                      <span aria-hidden className="mr-1 font-bold">
+                        ⚑
+                      </span>
+                    )}
+                    {v.label.replace(/\s*—\s*eluato$/, "")}
+                  </td>
+                  <td className={`whitespace-nowrap px-3 py-1.5 text-right tabular-nums ${bad ? "font-bold" : ""}`}>
+                    {v.result_raw}
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-slate-500">{v.unit}</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 text-right tabular-nums">
+                    {v.limit_display ?? "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-1.5 text-center">
+                    <span className={`inline-block rounded px-2 py-0.5 text-[10.5px] font-semibold ${st.pill}`}>
+                      {st.label}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function QuadroBlock({ quadro }: { quadro: QuadroData }) {
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   const s = STATUS[quadro.overall];
   return (
     <div>
@@ -101,9 +173,23 @@ export default function QuadroBlock({ quadro }: { quadro: QuadroData }) {
           </thead>
           <tbody>
             {quadro.rows.map((row) => (
-              <tr key={row.limit_table_id} className="border-t border-slate-100 align-middle">
+              <Fragment key={row.limit_table_id}>
+              <tr className="border-t border-slate-100 align-middle">
                 <td className="px-3 py-2">
                   <div className="flex items-start gap-2 font-medium text-slate-800">
+                    <button
+                      onClick={() => setOpen((p) => ({ ...p, [row.limit_table_id]: !p[row.limit_table_id] }))}
+                      aria-expanded={Boolean(open[row.limit_table_id])}
+                      aria-label={`Dettaglio parametri ${row.table_name}`}
+                      className="mt-[1px] shrink-0 rounded px-1 text-[10px] text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    >
+                      <span
+                        aria-hidden
+                        className={`inline-block transition-transform ${open[row.limit_table_id] ? "rotate-90" : ""}`}
+                      >
+                        ▶
+                      </span>
+                    </button>
                     <span
                       aria-hidden
                       className="mt-[6px] inline-block h-2.5 w-2.5 shrink-0 rounded-full"
@@ -134,6 +220,14 @@ export default function QuadroBlock({ quadro }: { quadro: QuadroData }) {
                   <StatusPill status={row.status} />
                 </td>
               </tr>
+              {open[row.limit_table_id] && (
+                <tr>
+                  <td colSpan={4} className="border-t border-slate-100 p-0">
+                    <VerdictDetail row={row} />
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
           </tbody>
         </table>
