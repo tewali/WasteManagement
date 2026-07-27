@@ -136,7 +136,17 @@ export function EsitoBlock({ verification }: { verification: VerificationResult 
   );
 }
 
-export default function MessageBlocks({ blocks }: { blocks: MessageBlock[] }) {
+export default function MessageBlocks({
+  blocks,
+  onRetry,
+  canRetry,
+}: {
+  blocks: MessageBlock[];
+  /** Replays the failed request behind an `errore` block. */
+  onRetry?: (retryId: string) => void;
+  /** False once the action is gone (e.g. after a page reload). */
+  canRetry?: (retryId: string) => boolean;
+}) {
   return (
     <div className="space-y-4">
       {blocks.map((b, i) => {
@@ -168,6 +178,26 @@ export default function MessageBlocks({ blocks }: { blocks: MessageBlock[] }) {
         }
         if (b.type === "quadro") {
           return <QuadroBlock key={i} quadro={b.quadro} />;
+        }
+        if (b.type === "errore") {
+          const retriable = onRetry && (canRetry?.(b.retry_id) ?? true);
+          return (
+            <div key={i} className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <div className="mb-1 flex items-center gap-2 text-[13px] font-bold text-slate-800">
+                <span aria-hidden>⚠️</span> Connessione non riuscita
+              </div>
+              <p className="text-[13px] leading-relaxed text-slate-700">{b.text}</p>
+              {b.hint && <p className="mt-1 text-[11.5px] text-slate-500">{b.hint}</p>}
+              {retriable && (
+                <button
+                  onClick={() => onRetry(b.retry_id)}
+                  className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-brand-dark px-3 py-1.5 text-[12.5px] font-semibold text-white hover:bg-brand"
+                >
+                  <span aria-hidden>↻</span> Riprova
+                </button>
+              )}
+            </div>
+          );
         }
         if (b.type === "esito") {
           return <EsitoBlock key={i} verification={b.verification} />;

@@ -253,6 +253,11 @@ export type MessageBlock =
   | { type: "text"; text: string }
   | { type: "inquadramento"; items: { label: string; value: string }[] }
   | { type: "quadro"; quadro: QuadroData }
+  /**
+   * A request that could not reach the API. Transient UI only — never persisted
+   * with the conversation; `retry_id` looks up the action that replays it.
+   */
+  | { type: "errore"; text: string; hint?: string; retry_id: string }
   | { type: "esito"; verification: VerificationResult; document_name: string }
   | { type: "conclusione"; tone: "ok" | "ko" | "warn"; title: string; lines: string[]; footer?: string };
 

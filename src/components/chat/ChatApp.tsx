@@ -88,12 +88,18 @@ export default function ChatApp({
   useEffect(() => {
     if (messages.length === 0) return;
     const s = persistState.current;
+    // Connection failures are transient UI: a stored retry button would come
+    // back dead on reload, so they never enter the conversation record.
+    const persisted = messages
+      .map((m) => ({ ...m, blocks: m.blocks?.filter((b) => b.type !== "errore") }))
+      .filter((m) => m.text || (m.blocks?.length ?? 0) > 0 || m.attachment);
+    if (persisted.length === 0) return;
     void fetch("/api/conversations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: s.conversationId,
-        messages,
+        messages: persisted,
         active_document_id: s.doc?.id ?? null,
         active_table_id: s.tableId,
         active_line_id: s.lineId,
@@ -131,6 +137,66 @@ export default function ChatApp({
   }
 
   const pushMessage = (m: ChatMessage) => setMessages((prev) => [...prev, m]);
+
+  // Failed requests, keyed by the retry_id carried in the `errore` block that
+  // reports them. The action replays the exact call that could not reach the API.
+  const [retryActions, setRetryActions] = useState<Record<string, () => Promise<void>>>({});
+
+  /** Plain-language reason, without leaking technical detail into the chat. */
+  function failureText(status?: number): { text: string; hint?: string } {
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return {
+        text: "Il dispositivo sembra offline: non ho potuto inviare la richiesta.",
+        hint: "Controlli la connessione e riprovi — il documento caricato resta disponibile.",
+      };
+    }
+    if (status && status >= 500) {
+      return {
+        text: `Il server ha risposto con un errore (${status}) e la richiesta non è stata completata.`,
+        hint: "Può riprovare subito: se l'errore persiste, avvisi un amministratore.",
+      };
+    }
+    if (status) {
+      return {
+        text: `La richiesta non è andata a buon fine (errore ${status}).`,
+        hint: "Può riprovare subito.",
+      };
+    }
+    return {
+      text: "Non riesco a raggiungere il server: la richiesta non è stata completata.",
+      hint: "Può riprovare subito: nessun dato è andato perso.",
+    };
+  }
+
+  /** Reports a failed call and registers the action that replays it. */
+  function pushFailure(status: number | undefined, action: () => Promise<void>) {
+    const retryId = mid();
+    setRetryActions((prev) => ({ ...prev, [retryId]: action }));
+    const { text, hint } = failureText(status);
+    pushMessage({
+      id: mid(),
+      role: "assistant",
+      time: now(),
+      blocks: [{ type: "errore", text, hint, retry_id: retryId }],
+    });
+  }
+
+  /** Drops the error message and replays the request behind it. */
+  function runRetry(retryId: string) {
+    const action = retryActions[retryId];
+    if (!action) return;
+    setRetryActions((prev) => {
+      const next = { ...prev };
+      delete next[retryId];
+      return next;
+    });
+    setMessages((prev) =>
+      prev.filter(
+        (m) => !(m.blocks ?? []).some((b) => b.type === "errore" && b.retry_id === retryId),
+      ),
+    );
+    void action();
+  }
 
   const askAnna = useCallback(
     async (
@@ -173,6 +239,12 @@ export default function ChatApp({
             full_check: opts?.fullCheck ?? false,
           }),
         });
+        // A failed request must offer a way back, not a dead end: the retry
+        // replays this same call with the user message already on screen.
+        if (!res.ok) {
+          pushFailure(res.status, () => askAnna(text, activeDoc, { ...opts, silentUser: true }));
+          return;
+        }
         const data = (await res.json()) as {
           blocks: MessageBlock[];
           verification: VerificationResult | null;
@@ -184,20 +256,16 @@ export default function ChatApp({
         if (data.verification) setVerification(data.verification);
         pushMessage({ id: mid(), role: "assistant", time: now(), blocks: data.blocks });
       } catch {
-        pushMessage({
-          id: mid(),
-          role: "assistant",
-          time: now(),
-          blocks: [{ type: "text", text: "Si è verificato un errore, riprovi tra qualche istante." }],
-        });
+        pushFailure(undefined, () => askAnna(text, activeDoc, { ...opts, silentUser: true }));
       } finally {
         setBusy(false);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [tableId, lineId],
   );
 
-  async function handleFiles(files: FileList | File[]) {
+  async function handleFiles(files: FileList | File[], opts?: { silentUser?: boolean }) {
     const file = Array.from(files)[0];
     if (!file) return;
     // PDF only: reject anything else before uploading.
@@ -218,26 +286,34 @@ export default function ChatApp({
     }
     // Show the uploaded PDF in the chat immediately — the dropzone/empty state
     // disappears now, and the typing indicator covers the extraction time.
-    pushMessage({
-      id: mid(),
-      role: "user",
-      time: now(),
-      text: `Ho caricato il rapporto di prova "${file.name}": puoi analizzarlo e verificarne la conformità?`,
-      attachment: { document_id: "", filename: file.name },
-    });
+    if (!opts?.silentUser) {
+      pushMessage({
+        id: mid(),
+        role: "user",
+        time: now(),
+        text: `Ho caricato il rapporto di prova "${file.name}": puoi analizzarlo e verificarne la conformità?`,
+        attachment: { document_id: "", filename: file.name },
+      });
+    }
     setBusy(true);
     try {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: fd });
       if (!res.ok) {
-        const err = (await res.json().catch(() => null)) as { error?: string } | null;
-        pushMessage({
-          id: mid(),
-          role: "assistant",
-          time: now(),
-          blocks: [{ type: "text", text: `⚠️ Caricamento rifiutato: ${err?.error ?? "errore sconosciuto"}` }],
-        });
+        // 4xx is a rejected file (wrong type, too large): a retry would fail the
+        // same way, so explain it. 5xx and network faults are worth retrying.
+        if (res.status < 500) {
+          const err = (await res.json().catch(() => null)) as { error?: string } | null;
+          pushMessage({
+            id: mid(),
+            role: "assistant",
+            time: now(),
+            blocks: [{ type: "text", text: `⚠️ Caricamento rifiutato: ${err?.error ?? "errore sconosciuto"}` }],
+          });
+          return;
+        }
+        pushFailure(res.status, () => handleFiles([file], { silentUser: true }));
         return;
       }
       const data = (await res.json()) as {
@@ -273,6 +349,8 @@ export default function ChatApp({
         data.document,
         { silentUser: true, fullCheck: true },
       );
+    } catch {
+      pushFailure(undefined, () => handleFiles([file], { silentUser: true }));
     } finally {
       setBusy(false);
     }
@@ -282,6 +360,10 @@ export default function ChatApp({
     setBusy(true);
     try {
       const res = await fetch("/api/demo/R1", { method: "POST" });
+      if (!res.ok) {
+        pushFailure(res.status, loadDemo);
+        return;
+      }
       const data = (await res.json()) as { document: DocumentRecord; analysis: AnalysisRecord };
       setDoc(data.document);
       setAnalysis(data.analysis);
@@ -295,6 +377,8 @@ export default function ChatApp({
         attachment: { document_id: data.document.id, filename: data.document.filename },
       });
       await askAnna(DEMO_PROMPT, data.document, { silentUser: true });
+    } catch {
+      pushFailure(undefined, loadDemo);
     } finally {
       setBusy(false);
     }
@@ -405,7 +489,12 @@ export default function ChatApp({
                 m.role === "user" ? (
                   <UserBubble key={m.id} m={m} />
                 ) : (
-                  <AssistantBubble key={m.id} m={m} />
+                  <AssistantBubble
+                    key={m.id}
+                    m={m}
+                    onRetry={runRetry}
+                    canRetry={(id) => Boolean(retryActions[id])}
+                  />
                 ),
               )}
               {busy && <TypingBubble />}
@@ -522,12 +611,20 @@ function UserBubble({ m }: { m: ChatMessage }) {
   );
 }
 
-function AssistantBubble({ m }: { m: ChatMessage }) {
+function AssistantBubble({
+  m,
+  onRetry,
+  canRetry,
+}: {
+  m: ChatMessage;
+  onRetry?: (retryId: string) => void;
+  canRetry?: (retryId: string) => boolean;
+}) {
   return (
     <div className="fade-up flex items-start gap-2.5">
       <AnnaAvatar />
       <div className="max-w-[92%] flex-1 rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-5 py-4 shadow-card">
-        {m.blocks && <MessageBlocks blocks={m.blocks} />}
+        {m.blocks && <MessageBlocks blocks={m.blocks} onRetry={onRetry} canRetry={canRetry} />}
       </div>
     </div>
   );
