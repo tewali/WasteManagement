@@ -7,6 +7,7 @@ COPY . .
 RUN npm run build
 
 FROM node:22.23.5-alpine AS runtime
+RUN apk add --no-cache curl
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 COPY --from=build --chown=node:node /app/.next/standalone ./
